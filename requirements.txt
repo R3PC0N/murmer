@@ -1,0 +1,10 @@
+faster-whisper
+sounddevice
+numpy
+keyboard
+pyperclip
+pystray
+Pillow
+anthropic
+python-dotenv
+customtkinter

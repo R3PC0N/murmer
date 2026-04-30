@@ -1,0 +1,5 @@
+# Required for AI text cleanup (Claude Haiku). Get one at https://console.anthropic.com
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Set to false to skip AI cleanup and use raw transcription
+AI_CLEANUP_ENABLED=true
