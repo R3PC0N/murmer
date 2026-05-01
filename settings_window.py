@@ -8,9 +8,10 @@ import config
 
 
 class SettingsWindow:
-    def __init__(self, root: ctk.CTk, on_save=None):
+    def __init__(self, root: ctk.CTk, on_save=None, on_restart=None):
         self._root = root
         self._on_save = on_save
+        self._on_restart = on_restart
         self._win: ctk.CTkToplevel | None = None
 
     def open(self):
@@ -23,68 +24,77 @@ class SettingsWindow:
     def _build(self):
         win = ctk.CTkToplevel(self._root)
         win.title("Murmer — Settings")
-        win.geometry("420x580")
+        win.geometry("460x700")
         win.resizable(False, False)
         win.attributes("-topmost", True)
         win.after(100, win.lift)
         self._win = win
 
-        scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=20, pady=(16, 4))
+        content = ctk.CTkFrame(win, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=24, pady=(16, 4))
 
         # ── General ──────────────────────────────────────────────
-        self._section(scroll, "GENERAL")
+        self._section(content, "GENERAL")
 
-        self._label(scroll, "Push-to-talk key")
+        self._label(content, "Push-to-talk key")
         self._hotkey_var = ctk.StringVar(value=config.PUSH_TO_TALK_KEY)
-        hotkey_row = ctk.CTkFrame(scroll, fg_color="transparent")
+        hotkey_row = ctk.CTkFrame(content, fg_color="transparent")
         hotkey_row.pack(anchor="w", pady=(0, 14))
-        self._hotkey_entry = ctk.CTkEntry(hotkey_row, textvariable=self._hotkey_var, width=140, state="readonly")
+        self._hotkey_entry = ctk.CTkEntry(hotkey_row, textvariable=self._hotkey_var,
+                                          width=140, state="readonly")
         self._hotkey_entry.pack(side="left", padx=(0, 8))
         self._capture_btn = ctk.CTkButton(hotkey_row, text="Capture key", width=110,
                                           command=self._start_capture)
         self._capture_btn.pack(side="left")
 
         self._autostart_var = ctk.BooleanVar(value=autostart.is_enabled())
-        self._toggle_row(scroll, "Start with Windows", self._autostart_var)
+        self._toggle_row(content, "Start with Windows", self._autostart_var)
 
         # ── Transcription ─────────────────────────────────────────
-        self._section(scroll, "TRANSCRIPTION")
+        self._section(content, "TRANSCRIPTION")
 
-        self._label(scroll, "Model")
+        self._label(content, "Model")
         self._model_var = ctk.StringVar(value=config.WHISPER_MODEL)
-        ctk.CTkOptionMenu(scroll, values=["large-v3", "medium", "small", "base"],
+        ctk.CTkOptionMenu(content, values=["large-v3", "medium", "small", "base"],
                           variable=self._model_var, width=180).pack(anchor="w", pady=(0, 14))
 
-        self._label(scroll, "Device")
+        self._label(content, "Device")
         self._device_var = ctk.StringVar(value=config.WHISPER_DEVICE)
-        ctk.CTkOptionMenu(scroll, values=["cuda", "cpu"],
+        ctk.CTkOptionMenu(content, values=["cuda", "cpu"],
                           variable=self._device_var, width=180).pack(anchor="w", pady=(0, 4))
 
-        ctk.CTkLabel(scroll, text="⚠  Model and device changes require a restart.",
+        ctk.CTkLabel(content, text="⚠  Model and device changes require a restart.",
                      font=ctk.CTkFont(size=11), text_color="#777").pack(anchor="w", pady=(2, 14))
 
         # ── AI Cleanup ────────────────────────────────────────────
-        self._section(scroll, "AI CLEANUP")
+        self._section(content, "AI CLEANUP")
 
         self._cleanup_var = ctk.BooleanVar(value=config.AI_CLEANUP_ENABLED)
-        self._toggle_row(scroll, "Enable AI cleanup (Claude Haiku)", self._cleanup_var)
+        self._toggle_row(content, "Enable AI cleanup (Claude Haiku)", self._cleanup_var)
 
-        self._label(scroll, "Anthropic API key")
+        self._label(content, "Anthropic API key")
         self._apikey_var = ctk.StringVar(value=config.ANTHROPIC_API_KEY)
-        ctk.CTkEntry(scroll, textvariable=self._apikey_var, show="●",
-                     width=340, placeholder_text="sk-ant-...").pack(anchor="w", pady=(0, 14))
+        ctk.CTkEntry(content, textvariable=self._apikey_var, show="●",
+                     width=380, placeholder_text="sk-ant-...").pack(anchor="w", pady=(0, 14))
 
         # ── Display ───────────────────────────────────────────────
-        self._section(scroll, "DISPLAY")
+        self._section(content, "DISPLAY")
 
         self._overlay_var = ctk.BooleanVar(value=config.SHOW_OVERLAY)
-        self._toggle_row(scroll, "Show recording overlay", self._overlay_var)
+        self._toggle_row(content, "Show recording overlay", self._overlay_var)
 
-        # ── Save ──────────────────────────────────────────────────
-        ctk.CTkButton(win, text="Save changes", command=self._save,
+        # ── Buttons ───────────────────────────────────────────────
+        btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=24, pady=(4, 20))
+
+        ctk.CTkButton(btn_frame, text="Save changes", command=self._save,
                       height=42, font=ctk.CTkFont(size=14)).pack(
-            fill="x", padx=20, pady=(4, 16))
+            side="left", expand=True, fill="x", padx=(0, 6))
+
+        ctk.CTkButton(btn_frame, text="Save & Restart", command=self._save_and_restart,
+                      height=42, font=ctk.CTkFont(size=14),
+                      fg_color="#555", hover_color="#444").pack(
+            side="left", expand=True, fill="x", padx=(6, 0))
 
     # ── Helpers ───────────────────────────────────────────────────
 
@@ -111,10 +121,11 @@ class SettingsWindow:
     def _capture_key(self):
         key = keyboard.read_key(suppress=True)
         self._win.after(0, lambda: self._hotkey_var.set(key))
-        self._win.after(0, lambda: self._capture_btn.configure(text="Capture key", state="normal"))
+        self._win.after(0, lambda: self._capture_btn.configure(
+            text="Capture key", state="normal"))
 
-    def _save(self):
-        updates = {
+    def _collect_updates(self) -> dict:
+        return {
             "PUSH_TO_TALK_KEY": self._hotkey_var.get().strip().lower() or "f9",
             "WHISPER_MODEL": self._model_var.get(),
             "WHISPER_DEVICE": self._device_var.get(),
@@ -124,8 +135,21 @@ class SettingsWindow:
             "SHOW_OVERLAY": self._overlay_var.get(),
             "AUTO_START": self._autostart_var.get(),
         }
+
+    def _save(self):
+        updates = self._collect_updates()
         config.save(updates)
         autostart.set_enabled(self._autostart_var.get())
         if self._on_save:
             self._on_save(updates)
         self._win.destroy()
+
+    def _save_and_restart(self):
+        updates = self._collect_updates()
+        config.save(updates)
+        autostart.set_enabled(self._autostart_var.get())
+        if self._on_save:
+            self._on_save(updates)
+        self._win.destroy()
+        if self._on_restart:
+            self._on_restart()

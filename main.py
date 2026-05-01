@@ -1,3 +1,25 @@
+# ── Early window (shown immediately before heavy imports) ─────────────────────
+import tkinter as _tk
+
+def _show_early_window():
+    win = _tk.Tk()
+    win.overrideredirect(True)
+    win.configure(bg="#1c1c1e")
+    win.attributes("-topmost", True)
+    sw = win.winfo_screenwidth()
+    sh = win.winfo_screenheight()
+    w, h = 300, 90
+    win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+    _tk.Label(win, text="Murmer", fg="#ffffff", bg="#1c1c1e",
+              font=("Segoe UI", 24, "bold")).place(relx=0.5, rely=0.38, anchor="center")
+    _tk.Label(win, text="Starting...", fg="#666666", bg="#1c1c1e",
+              font=("Segoe UI", 11)).place(relx=0.5, rely=0.72, anchor="center")
+    win.update()
+    return win
+
+_early_win = _show_early_window()
+
+# ── Heavy imports (early window is already visible) ───────────────────────────
 import ctypes
 import os
 import sys
@@ -20,7 +42,6 @@ from transcriber import Transcriber
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
-# Suppress HuggingFace progress bars — prevents a hang when there is no terminal
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 # ── Single instance ───────────────────────────────────────────────────────────
@@ -152,7 +173,7 @@ def _keyboard_listener():
     keyboard.wait()
 
 
-# ── Settings ──────────────────────────────────────────────────────────────────
+# ── Settings & restart ────────────────────────────────────────────────────────
 
 def _open_settings():
     if _root and settings_win:
@@ -166,6 +187,23 @@ def _on_settings_saved(updates: dict):
         threading.Thread(target=_keyboard_listener, daemon=True).start()
         print(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
     print("Settings saved.")
+
+
+def _restart():
+    global _mutex
+    if _mutex:
+        ctypes.windll.kernel32.CloseHandle(_mutex)
+        _mutex = None
+    keyboard.unhook_all()
+    if _icon:
+        _icon.stop()
+    if _root:
+        _root.after(0, _do_restart)
+
+
+def _do_restart():
+    _root.quit()
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 # ── Quit ──────────────────────────────────────────────────────────────────────
@@ -194,6 +232,7 @@ def _background_init(splash: SplashScreen):
         pystray.MenuItem(f"Hold {key} to record", None, enabled=False),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Settings", lambda icon, item: _open_settings()),
+        pystray.MenuItem("Restart",  lambda icon, item: _restart()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", lambda icon, item: _quit()),
     )
@@ -208,15 +247,20 @@ def _background_init(splash: SplashScreen):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    global _root, overlay, settings_win
+    global _root, overlay, settings_win, _early_win
 
     _ensure_single_instance()
+
+    # Destroy early window before creating CTk root
+    if _early_win:
+        _early_win.destroy()
+        _early_win = None
 
     _root = ctk.CTk()
     _root.withdraw()
 
     overlay = RecordingOverlay(_root)
-    settings_win = SettingsWindow(_root, on_save=_on_settings_saved)
+    settings_win = SettingsWindow(_root, on_save=_on_settings_saved, on_restart=_restart)
 
     splash = SplashScreen(_root)
 
