@@ -1,3 +1,6 @@
+import ctypes
+import os
+import sys
 import threading
 import winsound
 
@@ -11,10 +14,24 @@ from overlay import RecordingOverlay
 from paster import paste_text
 from recorder import Recorder
 from settings_window import SettingsWindow
+from splash import SplashScreen
 from transcriber import Transcriber
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
+
+# Suppress HuggingFace progress bars — prevents a hang when there is no terminal
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
+# ── Single instance ───────────────────────────────────────────────────────────
+_mutex = None
+
+def _ensure_single_instance():
+    global _mutex
+    _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmerSingleInstance")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        sys.exit(0)
+
 
 # ── State ─────────────────────────────────────────────────────────────────────
 _recording = False
@@ -144,6 +161,10 @@ def _open_settings():
 
 def _on_settings_saved(updates: dict):
     _load_cleaner()
+    if "PUSH_TO_TALK_KEY" in updates:
+        keyboard.unhook_all()
+        threading.Thread(target=_keyboard_listener, daemon=True).start()
+        print(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
     print("Settings saved.")
 
 
@@ -157,19 +178,13 @@ def _quit():
         _root.after(0, _root.quit)
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Startup ───────────────────────────────────────────────────────────────────
 
-def main():
-    global _icon, _root, overlay, settings_win
-
-    _root = ctk.CTk()
-    _root.withdraw()
+def _background_init(splash: SplashScreen):
+    global _icon
 
     transcriber.load()
     _load_cleaner()
-
-    overlay = RecordingOverlay(_root)
-    settings_win = SettingsWindow(_root, on_save=_on_settings_saved)
 
     key = config.PUSH_TO_TALK_KEY.upper()
     print(f"Ready. Hold {key} to record, release to transcribe and paste.")
@@ -187,6 +202,29 @@ def main():
     threading.Thread(target=_keyboard_listener, daemon=True).start()
     _icon.run_detached()
 
+    _root.after(0, splash.hide)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+def main():
+    global _root, overlay, settings_win
+
+    _ensure_single_instance()
+
+    _root = ctk.CTk()
+    _root.withdraw()
+
+    overlay = RecordingOverlay(_root)
+    settings_win = SettingsWindow(_root, on_save=_on_settings_saved)
+
+    splash = SplashScreen(_root)
+
+    def _start():
+        splash.show()
+        threading.Thread(target=_background_init, args=(splash,), daemon=True).start()
+
+    _root.after(100, _start)
     _root.mainloop()
 
 

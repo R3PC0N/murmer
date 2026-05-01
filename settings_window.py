@@ -1,4 +1,7 @@
+import threading
+
 import customtkinter as ctk
+import keyboard
 
 import autostart
 import config
@@ -34,8 +37,13 @@ class SettingsWindow:
 
         self._label(scroll, "Push-to-talk key")
         self._hotkey_var = ctk.StringVar(value=config.PUSH_TO_TALK_KEY)
-        ctk.CTkEntry(scroll, textvariable=self._hotkey_var, width=160,
-                     placeholder_text="e.g. f9, right alt").pack(anchor="w", pady=(0, 14))
+        hotkey_row = ctk.CTkFrame(scroll, fg_color="transparent")
+        hotkey_row.pack(anchor="w", pady=(0, 14))
+        self._hotkey_entry = ctk.CTkEntry(hotkey_row, textvariable=self._hotkey_var, width=140, state="readonly")
+        self._hotkey_entry.pack(side="left", padx=(0, 8))
+        self._capture_btn = ctk.CTkButton(hotkey_row, text="Capture key", width=110,
+                                          command=self._start_capture)
+        self._capture_btn.pack(side="left")
 
         self._autostart_var = ctk.BooleanVar(value=autostart.is_enabled())
         self._toggle_row(scroll, "Start with Windows", self._autostart_var)
@@ -94,6 +102,16 @@ class SettingsWindow:
         row.pack(fill="x", pady=(0, 14))
         ctk.CTkLabel(row, text=label, font=ctk.CTkFont(size=13)).pack(side="left")
         ctk.CTkSwitch(row, text="", variable=var, width=52).pack(side="right")
+
+    def _start_capture(self):
+        self._capture_btn.configure(text="Press a key...", state="disabled")
+        self._hotkey_var.set("...")
+        threading.Thread(target=self._capture_key, daemon=True).start()
+
+    def _capture_key(self):
+        key = keyboard.read_key(suppress=True)
+        self._win.after(0, lambda: self._hotkey_var.set(key))
+        self._win.after(0, lambda: self._capture_btn.configure(text="Capture key", state="normal"))
 
     def _save(self):
         updates = {
