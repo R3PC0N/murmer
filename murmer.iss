@@ -43,7 +43,7 @@ Source: "splash.py";           DestDir: "{app}"; Flags: ignoreversion
 Source: "logger.py";           DestDir: "{app}"; Flags: ignoreversion
 Source: "log_window.py";       DestDir: "{app}"; Flags: ignoreversion
 Source: "requirements.txt";    DestDir: "{app}"; Flags: ignoreversion
-Source: ".env - Copy.example"; DestDir: "{app}"; DestName: ".env.example"; Flags: ignoreversion
+Source: ".env.example"; DestDir: "{app}"; DestName: ".env.example"; Flags: ignoreversion
 Source: "murmer.ico";                    DestDir: "{app}"; Flags: ignoreversion
 Source: "server_manager_window.py";      DestDir: "{app}"; Flags: ignoreversion
 Source: "server\faster_whisper_server.py"; DestDir: "{app}\server"; Flags: ignoreversion
