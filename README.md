@@ -1,6 +1,6 @@
 # Murmer
 
-**Free, local voice dictation for Windows and Linux - a Murmur alternative.**
+**Free, local voice dictation for Windows and Linux.**
 
 Hold a key, speak, release. Murmer transcribes your voice using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and pastes the result into whatever app you have focused. Optionally, Claude Haiku cleans up filler words and fixes punctuation before pasting.
 
