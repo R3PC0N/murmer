@@ -225,7 +225,18 @@ class ServerManagerWindow:
         api_key = _get_api_key()
         if api_key:
             masked = api_key[:6] + "•" * (len(api_key) - 6)
-            self._info_row(info_frame, "API key", masked, "#4CAF50")
+            key_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+            key_row.pack(fill="x", padx=16, pady=2)
+            ctk.CTkLabel(key_row, text="API key:", font=ctk.CTkFont(size=12),
+                         text_color="#666", width=90, anchor="w").pack(side="left")
+            ctk.CTkLabel(key_row, text=masked, font=ctk.CTkFont(size=12),
+                         text_color="#4CAF50").pack(side="left", padx=(0, 10))
+            self._copy_btn = ctk.CTkButton(
+                key_row, text="Copy", width=70, height=26,
+                font=ctk.CTkFont(size=11),
+                command=lambda k=api_key: self._copy_key(k),
+            )
+            self._copy_btn.pack(side="left")
         else:
             key_row = ctk.CTkFrame(info_frame, fg_color="transparent")
             key_row.pack(fill="x", padx=16, pady=2)
@@ -261,6 +272,12 @@ class ServerManagerWindow:
                      text_color="#666", width=90, anchor="w").pack(side="left")
         ctk.CTkLabel(row, text=value, font=ctk.CTkFont(size=12),
                      text_color=value_color, anchor="w").pack(side="left")
+
+    def _copy_key(self, key: str):
+        self._win.clipboard_clear()
+        self._win.clipboard_append(key)
+        self._copy_btn.configure(text="Copied!", fg_color="#2d6e2d")
+        self._win.after(2000, lambda: self._copy_btn.configure(text="Copy", fg_color=("#3B8ED0", "#1F6AA5")))
 
     def _generate_api_key(self):
         import secrets
