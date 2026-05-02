@@ -142,9 +142,10 @@ class ServerManagerWindow:
             "use this PC's GPU for fast voice transcription.\n\n"
             "How it works:\n"
             "  1. Install the server on this PC (one time)\n"
-            "  2. Connect your other devices via Tailscale\n"
+            "  2. Make this PC reachable from your other device\n"
+            "     (local network, Tailscale, or a reverse proxy)\n"
             "  3. In Murmer Settings, set Mode to Remote and\n"
-            "     enter this PC's Tailscale IP + the API key\n\n"
+            "     enter this PC's URL + the API key\n\n"
             "The server runs silently in the background and\n"
             "can be started or stopped from this menu."
         )
@@ -274,8 +275,8 @@ class ServerManagerWindow:
                      text_color="#aaa").pack(anchor="w", padx=16, pady=(12, 6))
 
         tailscale_ip = _get_tailscale_ip()
-        ip_text = tailscale_ip if tailscale_ip else "Tailscale not detected"
-        ip_color = "#ffffff" if tailscale_ip else "#E07B39"
+        ip_text = tailscale_ip if tailscale_ip else "Not detected"
+        ip_color = "#ffffff" if tailscale_ip else "#888"
 
         self._info_row(info_frame, "Tailscale IP", ip_text, ip_color)
         self._info_row(info_frame, "Port", "8765")
@@ -323,8 +324,9 @@ class ServerManagerWindow:
             self._url_copy_btn.pack(side="left")
         else:
             ctk.CTkLabel(info_frame,
-                         text="Install Tailscale to connect from other devices.",
-                         font=ctk.CTkFont(size=11), text_color="#E07B39").pack(
+                         text="Connect via your local network, Tailscale, or a reverse proxy.\n"
+                              "Enter the URL manually in Settings → Transcription.",
+                         font=ctk.CTkFont(size=11), text_color="#888", justify="left").pack(
                 anchor="w", padx=16, pady=(4, 12))
 
         # Autostart toggle

@@ -230,7 +230,7 @@ class SettingsWindow:
         self._label(self._remote_frame, "Server URL")
         self._remote_url_var = ctk.StringVar(value=config.REMOTE_WHISPER_URL)
         ctk.CTkEntry(self._remote_frame, textvariable=self._remote_url_var,
-                     width=420, placeholder_text="http://100.x.x.x:8765").pack(anchor="w", pady=(0, 16))
+                     width=420, placeholder_text="http://192.168.1.x:8765 or https://yourserver.com").pack(anchor="w", pady=(0, 16))
         self._label(self._remote_frame, "API key")
         self._remote_key_var = ctk.StringVar(value=config.REMOTE_WHISPER_API_KEY)
         ctk.CTkEntry(self._remote_frame, textvariable=self._remote_key_var,
