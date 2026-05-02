@@ -19,6 +19,35 @@ def _is_installed() -> bool:
     return _VENV_PYTHON.exists() and _SERVER_SCRIPT.exists()
 
 
+def _open_firewall_port():
+    """Add an inbound Windows Firewall rule for port 8765 (requires elevation via UAC)."""
+    try:
+        # First check if a rule already exists so we don't duplicate
+        check = subprocess.run(
+            ["netsh", "advfirewall", "firewall", "show", "rule",
+             "name=Murmer Whisper Server"],
+            capture_output=True, text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        if "Murmer Whisper Server" in check.stdout:
+            return  # Rule already exists
+
+        # Rule missing — add it via an elevated PowerShell process (triggers UAC once)
+        subprocess.run(
+            ["powershell", "-Command",
+             "Start-Process powershell "
+             "-ArgumentList '-NoProfile -Command "
+             'New-NetFirewallRule -DisplayName \\"Murmer Whisper Server\\" '
+             "-Direction Inbound -Protocol TCP -LocalPort 8765 "
+             '-Action Allow -ErrorAction SilentlyContinue\' '
+             "-Verb RunAs -Wait"],
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        logger.log("Firewall rule added: port 8765 open for inbound connections.")
+    except Exception as e:
+        logger.log(f"Firewall rule could not be added automatically: {e}", level="ERROR")
+
+
 def _get_tailscale_ip() -> str | None:
     try:
         result = subprocess.run(
@@ -162,6 +191,10 @@ class ServerManagerWindow:
             if not _ENV_FILE.exists() and _ENV_EXAMPLE.exists():
                 import shutil
                 shutil.copy(_ENV_EXAMPLE, _ENV_FILE)
+
+            # Open Windows Firewall for port 8765
+            status("Configuring Windows Firewall for port 8765...")
+            _open_firewall_port()
 
             if self._win and self._win.winfo_exists():
                 self._win.after(0, self._show_installed)

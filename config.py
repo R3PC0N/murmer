@@ -22,6 +22,11 @@ _DEFAULTS: dict = {
     "ANTHROPIC_API_KEY": "",
     "SHOW_OVERLAY": True,
     "AUTO_START": False,
+    "WORD_CORRECTIONS": {},
+    "USER_PROFILE": "",
+    "TRANSCRIPTION_STYLE": "none",
+    "CUSTOM_STYLE_PROMPT": "",
+    "SAVED_SERVERS": [],
 }
 
 # Non-configurable constants

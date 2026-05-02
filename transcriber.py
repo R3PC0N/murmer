@@ -41,11 +41,17 @@ class Transcriber:
         return self._transcribe_local(audio)
 
     def _transcribe_local(self, audio: np.ndarray) -> tuple[str, str]:
+        initial_prompt = None
+        if config.WORD_CORRECTIONS:
+            # Feed correct spellings as a hint so Whisper biases toward them
+            initial_prompt = ", ".join(config.WORD_CORRECTIONS.values())
+
         segments, info = self.model.transcribe(
             audio,
             beam_size=5,
             vad_filter=True,
             vad_parameters={"min_silence_duration_ms": 300},
+            initial_prompt=initial_prompt,
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
         return text, info.language

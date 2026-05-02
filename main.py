@@ -22,6 +22,7 @@ _early_win = _show_early_window()
 # ── Heavy imports (early window is already visible) ───────────────────────────
 import ctypes
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -153,6 +154,15 @@ def _on_release():
     threading.Thread(target=_process, args=(audio,), daemon=True).start()
 
 
+def _apply_corrections(text: str) -> str:
+    corrections = config.WORD_CORRECTIONS
+    if not corrections:
+        return text
+    for wrong, right in corrections.items():
+        text = re.sub(r'\b' + re.escape(wrong) + r'\b', right, text, flags=re.IGNORECASE)
+    return text
+
+
 def _process(audio):
     global _processing
     try:
@@ -160,6 +170,7 @@ def _process(audio):
         if not text:
             return
         logger.log(f"Transcribed ({language}): {text}")
+        text = _apply_corrections(text)
         if cleaner and config.AI_CLEANUP_ENABLED:
             text = cleaner.clean(text, language)
             logger.log(f"Cleaned: {text}", level="RESULT")
