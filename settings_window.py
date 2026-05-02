@@ -330,6 +330,9 @@ class SettingsWindow:
         self._overlay_var = ctk.BooleanVar(value=config.SHOW_OVERLAY)
         self._toggle_row(f, "Show recording overlay", self._overlay_var)
 
+        self._beep_var = ctk.BooleanVar(value=config.BEEP_ENABLED)
+        self._toggle_row(f, "Sound feedback (beep on record/done)", self._beep_var)
+
     # ── Section: Profile ──────────────────────────────────────────
 
     def _build_profile(self):
@@ -445,6 +448,7 @@ class SettingsWindow:
             "REMOTE_WHISPER_API_KEY": self._remote_key_var.get().strip(),
             "AI_CLEANUP_ENABLED":     self._cleanup_var.get(),
             "ANTHROPIC_API_KEY":      self._apikey_var.get().strip(),
+            "BEEP_ENABLED":           self._beep_var.get(),
             "SHOW_OVERLAY":           self._overlay_var.get(),
             "AUTO_START":             self._autostart_var.get(),
             "TRANSCRIPTION_STYLE":    self._style_var.get(),

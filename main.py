@@ -66,6 +66,8 @@ _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 # ── Audio feedback ────────────────────────────────────────────────────────────
 
 def _beep(frequency: int, duration_ms: int):
+    if not config.BEEP_ENABLED:
+        return
     if sys.platform == "win32":
         import winsound
         winsound.Beep(frequency, duration_ms)
