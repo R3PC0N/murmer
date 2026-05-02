@@ -130,32 +130,43 @@ class ServerManagerWindow:
     def _show_linux_not_installed(self):
         win = self._win
         ctk.CTkLabel(win, text="Whisper Server",
-                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(28, 6))
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(24, 4))
         ctk.CTkLabel(win, text="Turn this PC into a transcription server",
-                     font=ctk.CTkFont(size=13), text_color="#888").pack(pady=(0, 20))
+                     font=ctk.CTkFont(size=13), text_color="#888").pack(pady=(0, 16))
 
-        info = (
-            "Set up the server manually using the server/ folder:\n\n"
-            "  cd server\n"
-            "  python3 -m venv venv\n"
-            "  source venv/bin/activate\n"
-            "  pip install -r requirements.txt\n"
-            "  cp .env.example .env\n"
-            "  nano .env   # set MURMER_API_KEY\n\n"
-            "Start it:\n\n"
-            "  python faster_whisper_server.py\n\n"
-            "Or as a systemd service:\n\n"
-            "  sudo cp murmer-whisper.service /etc/systemd/system/\n"
-            "  sudo systemctl enable --now murmer-whisper"
+        scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=24, pady=(0, 12))
+
+        self._linux_step(scroll, "1. Set up the server",
+            "cd server\n"
+            "python3 -m venv venv\n"
+            "source venv/bin/activate\n"
+            "pip install -r requirements.txt\n"
+            "cp .env.example .env\n"
+            "nano .env   # set MURMER_API_KEY"
         )
-        ctk.CTkLabel(win, text=info,
-                     font=ctk.CTkFont(family="Consolas", size=11),
-                     text_color="#aaa", justify="left").pack(padx=32, pady=(0, 20))
+        self._linux_step(scroll, "2. Start manually",
+            "python faster_whisper_server.py"
+        )
+        self._linux_step(scroll, "3. Or run as a systemd service",
+            "sudo cp murmer-whisper.service /etc/systemd/system/\n"
+            "sudo systemctl enable --now murmer-whisper"
+        )
 
         ctk.CTkLabel(win,
                      text="Once running, configure Settings → Transcription → Mode: Remote.",
-                     font=ctk.CTkFont(size=11), text_color="#666",
-                     justify="center").pack(padx=24)
+                     font=ctk.CTkFont(size=11), text_color="#666").pack(padx=24, pady=(0, 12))
+
+    def _linux_step(self, parent, title: str, commands: str):
+        ctk.CTkLabel(parent, text=title, font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="#aaa").pack(anchor="w", pady=(10, 4))
+        lines = commands.count("\n") + 1
+        box = ctk.CTkTextbox(parent, height=lines * 20 + 16,
+                             font=ctk.CTkFont(family="Consolas", size=12),
+                             fg_color="#1a1a1e", corner_radius=6, wrap="none")
+        box.pack(fill="x", pady=(0, 4))
+        box.insert("1.0", commands)
+        box.configure(state="disabled")
 
     def _show_linux_installed(self):
         self._clear()
