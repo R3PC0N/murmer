@@ -44,7 +44,11 @@ Source: "logger.py";           DestDir: "{app}"; Flags: ignoreversion
 Source: "log_window.py";       DestDir: "{app}"; Flags: ignoreversion
 Source: "requirements.txt";    DestDir: "{app}"; Flags: ignoreversion
 Source: ".env - Copy.example"; DestDir: "{app}"; DestName: ".env.example"; Flags: ignoreversion
-Source: "murmer.ico";          DestDir: "{app}"; Flags: ignoreversion
+Source: "murmer.ico";                    DestDir: "{app}"; Flags: ignoreversion
+Source: "server_manager_window.py";      DestDir: "{app}"; Flags: ignoreversion
+Source: "server\faster_whisper_server.py"; DestDir: "{app}\server"; Flags: ignoreversion
+Source: "server\requirements.txt";      DestDir: "{app}\server"; Flags: ignoreversion
+Source: "server\.env.example";          DestDir: "{app}\server"; DestName: ".env.example"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmer.ico"; Comment: "Voice dictation with AI cleanup"

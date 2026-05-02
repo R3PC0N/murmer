@@ -37,6 +37,7 @@ import config
 import logger
 from log_window import LogWindow
 from overlay import RecordingOverlay
+from server_manager_window import ServerManagerWindow
 from paster import paste_text
 from recorder import Recorder
 from settings_window import SettingsWindow
@@ -71,6 +72,7 @@ cleaner = None
 overlay: RecordingOverlay | None = None
 settings_win: SettingsWindow | None = None
 log_win: LogWindow | None = None
+server_manager_win: ServerManagerWindow | None = None
 
 
 # ── Cleaner ───────────────────────────────────────────────────────────────────
@@ -237,6 +239,11 @@ def _open_log():
         _root.after(0, log_win.open)
 
 
+def _open_server_manager():
+    if _root and server_manager_win:
+        _root.after(0, server_manager_win.open)
+
+
 def _on_settings_saved(updates: dict):
     _load_cleaner()
     if "PUSH_TO_TALK_KEY" in updates:
@@ -302,14 +309,7 @@ def _background_init(splash: SplashScreen):
         pystray.MenuItem("Activity log",  lambda icon, item: _open_log()),
         pystray.MenuItem("Open history",  lambda icon, item: logger.open_history()),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem(
-            lambda item: "Stop Whisper Server" if _server_running() else "Start Whisper Server",
-            lambda icon, item: _stop_whisper_server() if _server_running() else _start_whisper_server(),
-        ),
-        pystray.MenuItem(
-            lambda item: "● Server actief" if _server_running() else "○ Server gestopt",
-            None, enabled=False,
-        ),
+        pystray.MenuItem("Whisper Server...", lambda icon, item: _open_server_manager()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Restart",       lambda icon, item: _restart()),
         pystray.Menu.SEPARATOR,
@@ -326,7 +326,7 @@ def _background_init(splash: SplashScreen):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    global _root, overlay, settings_win, log_win, _early_win
+    global _root, overlay, settings_win, log_win, server_manager_win, _early_win
 
     _ensure_single_instance()
 
@@ -341,6 +341,12 @@ def main():
     overlay = RecordingOverlay(_root)
     settings_win = SettingsWindow(_root, on_save=_on_settings_saved, on_restart=_restart)
     log_win = LogWindow(_root)
+    server_manager_win = ServerManagerWindow(
+        _root,
+        get_server_running=_server_running,
+        start_server=_start_whisper_server,
+        stop_server=_stop_whisper_server,
+    )
 
     splash = SplashScreen(_root)
 

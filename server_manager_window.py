@@ -1,0 +1,271 @@
+import subprocess
+import threading
+from pathlib import Path
+
+import customtkinter as ctk
+
+import logger
+
+_SERVER_DIR = Path(__file__).parent / "server"
+_VENV_PYTHON = _SERVER_DIR / "venv" / "Scripts" / "python.exe"
+_SERVER_SCRIPT = _SERVER_DIR / "faster_whisper_server.py"
+_REQUIREMENTS = _SERVER_DIR / "requirements.txt"
+_ENV_FILE = _SERVER_DIR / ".env"
+_ENV_EXAMPLE = _SERVER_DIR / ".env.example"
+
+
+def _is_installed() -> bool:
+    return _VENV_PYTHON.exists() and _SERVER_SCRIPT.exists()
+
+
+def _get_tailscale_ip() -> str | None:
+    try:
+        result = subprocess.run(
+            ["powershell", "-Command",
+             "Get-NetIPAddress | Where-Object {$_.IPAddress -like '100.*'} "
+             "| Select-Object -First 1 -ExpandProperty IPAddress"],
+            capture_output=True, text=True, timeout=5,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        ip = result.stdout.strip()
+        return ip if ip else None
+    except Exception:
+        return None
+
+
+def _get_api_key() -> str:
+    if _ENV_FILE.exists():
+        for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
+            if line.startswith("MURMER_API_KEY="):
+                val = line.split("=", 1)[1].strip()
+                if val and val != "vervang-dit-met-een-sterk-wachtwoord":
+                    return val
+    return ""
+
+
+class ServerManagerWindow:
+    def __init__(self, root: ctk.CTk, get_server_running, start_server, stop_server):
+        self._root = root
+        self._get_server_running = get_server_running
+        self._start_server = start_server
+        self._stop_server = stop_server
+        self._win: ctk.CTkToplevel | None = None
+
+    def open(self):
+        if self._win and self._win.winfo_exists():
+            self._win.lift()
+            self._win.focus()
+            return
+        self._build()
+
+    def _build(self):
+        win = ctk.CTkToplevel(self._root)
+        win.title("Murmer — Whisper Server")
+        win.geometry("480x520")
+        win.resizable(False, False)
+        win.after(100, win.lift)
+        self._win = win
+
+        if not _is_installed():
+            self._show_not_installed()
+        else:
+            self._show_installed()
+
+    # ── Not installed ─────────────────────────────────────────────
+
+    def _show_not_installed(self):
+        self._clear()
+        win = self._win
+
+        ctk.CTkLabel(win, text="Whisper Server",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(28, 6))
+
+        ctk.CTkLabel(win, text="Turn this PC into a transcription server",
+                     font=ctk.CTkFont(size=13), text_color="#888").pack(pady=(0, 24))
+
+        info = (
+            "The Whisper Server lets other devices — like your laptop —\n"
+            "use this PC's GPU for fast voice transcription.\n\n"
+            "How it works:\n"
+            "  1. Install the server on this PC (one time)\n"
+            "  2. Connect your other devices via Tailscale\n"
+            "  3. In Murmer Settings, set Mode to Remote and\n"
+            "     enter this PC's Tailscale IP + the API key\n\n"
+            "The server runs silently in the background and\n"
+            "can be started or stopped from this menu."
+        )
+        ctk.CTkLabel(win, text=info, font=ctk.CTkFont(size=12),
+                     text_color="#aaa", justify="left").pack(padx=32, pady=(0, 28))
+
+        self._install_btn = ctk.CTkButton(
+            win, text="Install Server", height=42,
+            font=ctk.CTkFont(size=14), width=200,
+            command=self._start_install,
+        )
+        self._install_btn.pack(pady=(0, 8))
+
+        ctk.CTkLabel(win, text="This will download ~500 MB of dependencies.",
+                     font=ctk.CTkFont(size=11), text_color="#555").pack()
+
+    # ── Installing ────────────────────────────────────────────────
+
+    def _start_install(self):
+        self._clear()
+        win = self._win
+
+        ctk.CTkLabel(win, text="Installing Whisper Server",
+                     font=ctk.CTkFont(size=18, weight="bold")).pack(pady=(32, 8))
+
+        self._install_status = ctk.CTkLabel(
+            win, text="Creating virtual environment...",
+            font=ctk.CTkFont(size=12), text_color="#aaa", wraplength=400,
+        )
+        self._install_status.pack(pady=(0, 16))
+
+        self._install_bar = ctk.CTkProgressBar(win, mode="indeterminate", width=340)
+        self._install_bar.pack(pady=(0, 8))
+        self._install_bar.start()
+
+        ctk.CTkLabel(win, text="This may take a few minutes. Please wait.",
+                     font=ctk.CTkFont(size=11), text_color="#555").pack()
+
+        threading.Thread(target=self._run_install, daemon=True).start()
+
+    def _run_install(self):
+        def status(msg):
+            if self._win and self._win.winfo_exists():
+                self._win.after(0, lambda m=msg: self._install_status.configure(text=m))
+
+        try:
+            # Create venv
+            status("Creating virtual environment...")
+            result = subprocess.run(
+                ["python", "-m", "venv", str(_SERVER_DIR / "venv")],
+                capture_output=True, text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"Venv creation failed:\n{result.stderr}")
+
+            # Install dependencies
+            status("Installing dependencies (faster-whisper, FastAPI, uvicorn)...\nThis may take a few minutes.")
+            result = subprocess.run(
+                [str(_VENV_PYTHON), "-m", "pip", "install", "-r", str(_REQUIREMENTS), "--quiet"],
+                capture_output=True, text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"pip install failed:\n{result.stderr}")
+
+            # Create .env if missing
+            if not _ENV_FILE.exists() and _ENV_EXAMPLE.exists():
+                import shutil
+                shutil.copy(_ENV_EXAMPLE, _ENV_FILE)
+
+            if self._win and self._win.winfo_exists():
+                self._win.after(0, self._show_installed)
+
+        except Exception as e:
+            logger.log(f"Server install failed: {e}", level="ERROR")
+            if self._win and self._win.winfo_exists():
+                self._win.after(0, lambda: self._show_install_error(str(e)))
+
+    def _show_install_error(self, msg: str):
+        self._clear()
+        ctk.CTkLabel(self._win, text="Installation failed",
+                     font=ctk.CTkFont(size=18, weight="bold"),
+                     text_color="#D94040").pack(pady=(32, 12))
+        ctk.CTkLabel(self._win, text=msg, font=ctk.CTkFont(size=11),
+                     text_color="#aaa", wraplength=420, justify="left").pack(padx=24)
+        ctk.CTkButton(self._win, text="Try again", command=self._show_not_installed,
+                      width=140).pack(pady=24)
+
+    # ── Installed ─────────────────────────────────────────────────
+
+    def _show_installed(self):
+        self._clear()
+        win = self._win
+
+        running = self._get_server_running()
+
+        ctk.CTkLabel(win, text="Whisper Server",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(24, 4))
+
+        status_color = "#4CAF50" if running else "#888"
+        status_text = "● Running" if running else "○ Stopped"
+        ctk.CTkLabel(win, text=status_text, font=ctk.CTkFont(size=13),
+                     text_color=status_color).pack(pady=(0, 20))
+
+        # Start/Stop button
+        if running:
+            ctk.CTkButton(win, text="Stop Server", height=38, width=160,
+                          fg_color="#8B2020", hover_color="#6B1818",
+                          font=ctk.CTkFont(size=13),
+                          command=self._do_stop).pack(pady=(0, 24))
+        else:
+            ctk.CTkButton(win, text="Start Server", height=38, width=160,
+                          font=ctk.CTkFont(size=13),
+                          command=self._do_start).pack(pady=(0, 24))
+
+        # Connection info
+        info_frame = ctk.CTkFrame(win, corner_radius=8)
+        info_frame.pack(fill="x", padx=24, pady=(0, 16))
+
+        ctk.CTkLabel(info_frame, text="Connection details",
+                     font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="#aaa").pack(anchor="w", padx=16, pady=(12, 6))
+
+        tailscale_ip = _get_tailscale_ip()
+        ip_text = tailscale_ip if tailscale_ip else "Tailscale not detected"
+        ip_color = "#ffffff" if tailscale_ip else "#E07B39"
+
+        self._info_row(info_frame, "Tailscale IP", ip_text, ip_color)
+        self._info_row(info_frame, "Port", "8765")
+
+        api_key = _get_api_key()
+        if api_key:
+            masked = api_key[:6] + "•" * (len(api_key) - 6)
+            self._info_row(info_frame, "API key", masked, "#4CAF50")
+        else:
+            self._info_row(info_frame, "API key", "Not set — edit server\\.env", "#E07B39")
+
+        if tailscale_ip:
+            url = f"http://{tailscale_ip}:8765"
+            ctk.CTkLabel(info_frame, text=f"Remote URL:  {url}",
+                         font=ctk.CTkFont(family="Consolas", size=11),
+                         text_color="#4a9eff").pack(anchor="w", padx=16, pady=(4, 12))
+        else:
+            ctk.CTkLabel(info_frame,
+                         text="Install Tailscale to connect from other devices.",
+                         font=ctk.CTkFont(size=11), text_color="#E07B39").pack(
+                anchor="w", padx=16, pady=(4, 12))
+
+        ctk.CTkLabel(win,
+                     text="On your other device: open Murmer → Settings → Transcription\n"
+                          "Set Mode to Remote and enter the URL and API key above.",
+                     font=ctk.CTkFont(size=11), text_color="#666",
+                     justify="left").pack(padx=24)
+
+    def _info_row(self, parent, label: str, value: str, value_color: str = "#ffffff"):
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", padx=16, pady=2)
+        ctk.CTkLabel(row, text=f"{label}:", font=ctk.CTkFont(size=12),
+                     text_color="#666", width=90, anchor="w").pack(side="left")
+        ctk.CTkLabel(row, text=value, font=ctk.CTkFont(size=12),
+                     text_color=value_color, anchor="w").pack(side="left")
+
+    def _do_start(self):
+        self._start_server()
+        self._show_installed()
+
+    def _do_stop(self):
+        self._stop_server()
+        self._show_installed()
+
+    # ── Helpers ───────────────────────────────────────────────────
+
+    def _clear(self):
+        if not self._win:
+            return
+        for widget in self._win.winfo_children():
+            widget.destroy()
