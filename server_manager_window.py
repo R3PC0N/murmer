@@ -72,6 +72,18 @@ def _get_tailscale_ip() -> str | None:
         return None
 
 
+def _get_local_ip() -> str | None:
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
+
 def _get_api_key() -> str:
     if _ENV_FILE.exists():
         for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
@@ -106,24 +118,117 @@ class ServerManagerWindow:
         self._win = win
 
         if sys.platform != "win32":
-            self._show_linux_not_supported()
+            if _is_installed():
+                self._show_linux_installed()
+            else:
+                self._show_linux_not_installed()
         elif not _is_installed():
             self._show_not_installed()
         else:
             self._show_installed()
 
-    def _show_linux_not_supported(self):
+    def _show_linux_not_installed(self):
         win = self._win
         ctk.CTkLabel(win, text="Whisper Server",
-                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(40, 10))
-        ctk.CTkLabel(
-            win,
-            text="Server management is not available on Linux.\n\n"
-                 "To use a remote Whisper server, set it up manually\n"
-                 "using the files in the server/ folder, then configure\n"
-                 "Settings → Transcription → Mode: Remote.",
-            font=ctk.CTkFont(size=13), text_color="#aaa", justify="center",
-        ).pack(padx=32, pady=(0, 32))
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(28, 6))
+        ctk.CTkLabel(win, text="Turn this PC into a transcription server",
+                     font=ctk.CTkFont(size=13), text_color="#888").pack(pady=(0, 20))
+
+        info = (
+            "Set up the server manually using the server/ folder:\n\n"
+            "  cd server\n"
+            "  python3 -m venv venv\n"
+            "  source venv/bin/activate\n"
+            "  pip install -r requirements.txt\n"
+            "  cp .env.example .env\n"
+            "  nano .env   # set MURMER_API_KEY\n\n"
+            "Start it:\n\n"
+            "  python faster_whisper_server.py\n\n"
+            "Or as a systemd service:\n\n"
+            "  sudo cp murmer-whisper.service /etc/systemd/system/\n"
+            "  sudo systemctl enable --now murmer-whisper"
+        )
+        ctk.CTkLabel(win, text=info,
+                     font=ctk.CTkFont(family="Consolas", size=11),
+                     text_color="#aaa", justify="left").pack(padx=32, pady=(0, 20))
+
+        ctk.CTkLabel(win,
+                     text="Once running, configure Settings → Transcription → Mode: Remote.",
+                     font=ctk.CTkFont(size=11), text_color="#666",
+                     justify="center").pack(padx=24)
+
+    def _show_linux_installed(self):
+        self._clear()
+        win = self._win
+
+        running = self._get_server_running()
+
+        ctk.CTkLabel(win, text="Whisper Server",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(24, 4))
+
+        status_color = "#4CAF50" if running else "#888"
+        status_text = "● Running" if running else "○ Stopped"
+        ctk.CTkLabel(win, text=status_text, font=ctk.CTkFont(size=13),
+                     text_color=status_color).pack(pady=(0, 16))
+
+        if running:
+            ctk.CTkButton(win, text="Stop Server", height=38, width=160,
+                          fg_color="#8B2020", hover_color="#6B1818",
+                          font=ctk.CTkFont(size=13),
+                          command=self._linux_stop).pack(pady=(0, 20))
+        else:
+            ctk.CTkButton(win, text="Start Server", height=38, width=160,
+                          font=ctk.CTkFont(size=13),
+                          command=self._linux_start).pack(pady=(0, 20))
+
+        # Connection info
+        info_frame = ctk.CTkFrame(win, corner_radius=8)
+        info_frame.pack(fill="x", padx=24, pady=(0, 16))
+
+        ctk.CTkLabel(info_frame, text="Connection details",
+                     font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="#aaa").pack(anchor="w", padx=16, pady=(12, 6))
+
+        local_ip = _get_local_ip()
+        ip_text = local_ip if local_ip else "Not detected"
+        ip_color = "#ffffff" if local_ip else "#888"
+        self._info_row(info_frame, "Local IP", ip_text, ip_color)
+        self._info_row(info_frame, "Port", "8765")
+
+        api_key = _get_api_key()
+        if api_key:
+            masked = api_key[:6] + "•" * (len(api_key) - 6)
+            key_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+            key_row.pack(fill="x", padx=16, pady=(2, 12))
+            ctk.CTkLabel(key_row, text="API key:", font=ctk.CTkFont(size=12),
+                         text_color="#666", width=90, anchor="w").pack(side="left")
+            ctk.CTkLabel(key_row, text=masked, font=ctk.CTkFont(size=12),
+                         text_color="#4CAF50").pack(side="left", padx=(0, 10))
+            self._copy_btn = ctk.CTkButton(
+                key_row, text="Copy", width=70, height=26,
+                font=ctk.CTkFont(size=11),
+                command=lambda k=api_key: self._copy_key(k),
+            )
+            self._copy_btn.pack(side="left")
+        else:
+            ctk.CTkLabel(info_frame,
+                         text="API key not set — edit server/.env and set MURMER_API_KEY.",
+                         font=ctk.CTkFont(size=11), text_color="#E07B39",
+                         justify="left").pack(anchor="w", padx=16, pady=(2, 12))
+
+        ctk.CTkLabel(win,
+                     text="On your other device: Settings → Transcription → Remote\n"
+                          "Enter the URL (http://IP:8765) and API key above.",
+                     font=ctk.CTkFont(size=11), text_color="#666",
+                     justify="left").pack(padx=24, pady=(4, 0))
+
+    def _linux_start(self):
+        self._start_server()
+        self._show_linux_installed()
+
+    def _linux_stop(self):
+        self._stop_server()
+        self._show_linux_installed()
 
     # ── Not installed ─────────────────────────────────────────────
 
