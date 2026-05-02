@@ -195,8 +195,17 @@ def _keyboard_listener():
 
 # ── Settings & restart ────────────────────────────────────────────────────────
 
+def _server_port_in_use() -> bool:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.2)
+        return s.connect_ex(("127.0.0.1", 8765)) == 0
+
+
 def _server_running() -> bool:
-    return _server_proc is not None and _server_proc.poll() is None
+    if _server_proc is not None and _server_proc.poll() is None:
+        return True
+    return _server_port_in_use()
 
 
 def _start_whisper_server():

@@ -330,6 +330,11 @@ class ServerManagerWindow:
             else:
                 _ENV_FILE.write_text(f"MURMER_API_KEY={key}\n", encoding="utf-8")
             logger.log("Whisper Server API key gegenereerd en opgeslagen.")
+            # Herstart server zodat nieuwe key actief wordt
+            if self._get_server_running():
+                self._stop_server()
+                self._start_server()
+                logger.log("Whisper Server herstart met nieuwe API key.")
         except Exception as e:
             logger.log(f"API key opslaan mislukt: {e}", level="ERROR")
         self._show_installed()
