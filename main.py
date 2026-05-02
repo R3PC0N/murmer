@@ -295,6 +295,9 @@ def _background_init(splash: SplashScreen):
         dev = config.AUDIO_DEVICE or "Default"
         logger.log(f"Audio device: {dev}")
 
+    if config.WHISPER_SERVER_AUTOSTART:
+        _start_whisper_server()
+
     transcriber.load()
     _load_cleaner()
 
@@ -310,6 +313,10 @@ def _background_init(splash: SplashScreen):
         pystray.MenuItem("Open history",  lambda icon, item: logger.open_history()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Whisper Server...", lambda icon, item: _open_server_manager()),
+        pystray.MenuItem(
+            lambda item: "● Server running" if _server_running() else "○ Server stopped",
+            None, enabled=False,
+        ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Restart",       lambda icon, item: _restart()),
         pystray.Menu.SEPARATOR,

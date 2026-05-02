@@ -4,6 +4,7 @@ from pathlib import Path
 
 import customtkinter as ctk
 
+import config
 import logger
 
 _SERVER_DIR = Path(__file__).parent / "server"
@@ -269,11 +270,20 @@ class ServerManagerWindow:
                          font=ctk.CTkFont(size=11), text_color="#E07B39").pack(
                 anchor="w", padx=16, pady=(4, 12))
 
+        # Autostart toggle
+        autostart_row = ctk.CTkFrame(win, fg_color="transparent")
+        autostart_row.pack(fill="x", padx=24, pady=(12, 4))
+        ctk.CTkLabel(autostart_row, text="Start server when Murmer launches",
+                     font=ctk.CTkFont(size=12)).pack(side="left")
+        self._autostart_var = ctk.BooleanVar(value=config.WHISPER_SERVER_AUTOSTART)
+        ctk.CTkSwitch(autostart_row, text="", variable=self._autostart_var,
+                      width=52, command=self._save_autostart).pack(side="right")
+
         ctk.CTkLabel(win,
                      text="On your other device: open Murmer → Settings → Transcription\n"
                           "Set Mode to Remote and enter the URL and API key above.",
                      font=ctk.CTkFont(size=11), text_color="#666",
-                     justify="left").pack(padx=24)
+                     justify="left").pack(padx=24, pady=(4, 0))
 
     def _info_row(self, parent, label: str, value: str, value_color: str = "#ffffff"):
         row = ctk.CTkFrame(parent, fg_color="transparent")
@@ -282,6 +292,11 @@ class ServerManagerWindow:
                      text_color="#666", width=90, anchor="w").pack(side="left")
         ctk.CTkLabel(row, text=value, font=ctk.CTkFont(size=12),
                      text_color=value_color, anchor="w").pack(side="left")
+
+    def _save_autostart(self):
+        config.save({"WHISPER_SERVER_AUTOSTART": self._autostart_var.get()})
+        state = "ingeschakeld" if self._autostart_var.get() else "uitgeschakeld"
+        logger.log(f"Whisper Server autostart {state}.")
 
     def _copy_url(self, url: str):
         self._win.clipboard_clear()
