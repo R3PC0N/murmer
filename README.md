@@ -1,28 +1,28 @@
 # Murmer
 
-**Free, local voice dictation for Windows — a Murmur alternative.**
+**Free, local voice dictation for Windows - a Murmur alternative.**
 
 Hold a key, speak, release. Murmer transcribes your voice using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and pastes the result into whatever app you have focused. Optionally, Claude Haiku cleans up filler words and fixes punctuation before pasting.
 
-No subscription. No cloud. Your audio never leaves your machine — unless you choose to use a remote server you control yourself.
+No subscription. No cloud. Your audio never leaves your machine - unless you choose to use a remote server you control yourself.
 
 ---
 
 ## Features
 
-- **Push-to-talk** — hold any configurable key to record, release to transcribe and paste
-- **Local transcription** — runs Whisper entirely on your own GPU or CPU, no internet required
-- **Remote transcription** — offload transcription to another PC (e.g. a desktop with a powerful GPU) over [Tailscale](https://tailscale.com)
-- **AI cleanup** — Claude Haiku removes filler words, fixes punctuation and capitalization, and preserves your language (Dutch, English, or mixed)
-- **Style profiles** — choose Formal, Informal, Technical, or write your own style instruction
-- **User profile** — tell Haiku who you are so it can apply context to every transcription
-- **Word corrections** — force correct spelling for names, terms or brand names Whisper gets wrong; applied even without AI cleanup
-- **Saved servers** — store multiple remote server configurations and switch between them instantly
-- **Audio device selection** — choose any input device from settings
-- **Activity log** — compact or debug view of every transcription session; full history saved to disk
-- **Windows Whisper Server manager** — install, start, stop and configure a local Whisper server directly from the tray icon
-- **System tray** — runs silently in the background, waveform icon changes colour for idle / recording / processing
-- **Single installer** — one `.exe` sets up a Python virtual environment and all dependencies automatically
+- **Push-to-talk** - hold any configurable key to record, release to transcribe and paste
+- **Local transcription** - runs Whisper entirely on your own GPU or CPU, no internet required
+- **Remote transcription** - offload transcription to another PC (e.g. a desktop with a powerful GPU) over [Tailscale](https://tailscale.com)
+- **AI cleanup** - Claude Haiku removes filler words, fixes punctuation and capitalization, and preserves your language (Dutch, English, or mixed)
+- **Style profiles** - choose Formal, Informal, Technical, or write your own style instruction
+- **User profile** - tell Haiku who you are so it can apply context to every transcription
+- **Word corrections** - force correct spelling for names, terms or brand names Whisper gets wrong; applied even without AI cleanup
+- **Saved servers** - store multiple remote server configurations and switch between them instantly
+- **Audio device selection** - choose any input device from settings
+- **Activity log** - compact or debug view of every transcription session; full history saved to disk
+- **Windows Whisper Server manager** - install, start, stop and configure a local Whisper server directly from the tray icon
+- **System tray** - runs silently in the background, waveform icon changes colour for idle / recording / processing
+- **Single installer** - one `.exe` sets up a Python virtual environment and all dependencies automatically
 
 ---
 
@@ -32,7 +32,7 @@ No subscription. No cloud. Your audio never leaves your machine — unless you c
 
 | Dependency | Version | Download |
 |---|---|---|
-| **Windows** | 10 or 11 (64-bit) | — |
+| **Windows** | 10 or 11 (64-bit) | - |
 | **Python** | 3.10 or newer | [python.org/downloads](https://www.python.org/downloads/) |
 
 > ⚠ During Python installation, tick **"Add Python to PATH"**.
@@ -68,7 +68,7 @@ Without CUDA, Murmer falls back to CPU transcription automatically. The installe
    - Create a Python virtual environment
    - Install all Python dependencies
    - Create a Start Menu shortcut (and optionally a desktop shortcut)
-4. On first launch, Murmer downloads the Whisper speech model (~300 MB for `medium`, ~1.5 GB for `large-v3`). A loading screen will appear — just wait until it disappears.
+4. On first launch, Murmer downloads the Whisper speech model (~300 MB for `medium`, ~1.5 GB for `large-v3`). A loading screen will appear - just wait until it disappears.
 
 ---
 
@@ -123,7 +123,7 @@ Choose a style in **Profile → Transcription style**:
 
 | Style | Effect |
 |---|---|
-| `none` | No style instruction — only filler removal and punctuation fixes |
+| `none` | No style instruction - only filler removal and punctuation fixes |
 | `formal` | Complete sentences, professional tone |
 | `informal` | Casual tone, contractions allowed |
 | `technical` | Technical terms and acronyms preserved exactly |
@@ -133,7 +133,7 @@ Choose a style in **Profile → Transcription style**:
 
 ## Remote transcription
 
-Murmer can send audio to a Whisper server running on another machine — useful if your laptop is slow but you have a powerful desktop or home server.
+Murmer can send audio to a Whisper server running on another machine - useful if your laptop is slow but you have a powerful desktop or home server.
 
 ### How it works
 
@@ -221,8 +221,8 @@ curl http://localhost:8765/health
 
 Right-click the tray icon → **Activity log** to see recent transcriptions.
 
-- **Compact** — shows transcription results and errors only
-- **Debug** — shows every step including raw Whisper output before cleanup
+- **Compact** - shows transcription results and errors only
+- **Debug** - shows every step including raw Whisper output before cleanup
 
 Full history is saved to `%LOCALAPPDATA%\Murmer\history.log`. Open it via tray → **Open history**.
 
@@ -260,4 +260,4 @@ Output: dist\Murmer-Setup-vX.X.exe
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT - see [LICENSE](LICENSE)
