@@ -75,7 +75,8 @@ def _beep(frequency: int, duration_ms: int):
 # ── Single instance ───────────────────────────────────────────────────────────
 _mutex = None
 _lock_file = None
-_pynput_listener = None  # Linux only
+_pynput_listener = None   # Linux only
+_icon_ready = threading.Event()  # Linux only: signals main thread that icon is ready
 
 def _ensure_single_instance():
     global _mutex, _lock_file
@@ -460,7 +461,11 @@ def _background_init(splash: SplashScreen):
     _icon = pystray.Icon("murmer", _make_icon(), "Murmer", menu)
 
     threading.Thread(target=_keyboard_listener, daemon=True).start()
-    _icon.run_detached()
+
+    if sys.platform == "win32":
+        _icon.run_detached()
+    else:
+        _icon_ready.set()  # hand icon to main thread to run there
 
     _root.after(0, splash.hide)
 
@@ -497,7 +502,16 @@ def main():
         threading.Thread(target=_background_init, args=(splash,), daemon=True).start()
 
     _root.after(100, _start)
-    _root.mainloop()
+
+    if sys.platform == "win32":
+        _root.mainloop()
+    else:
+        # Linux: GTK/AppIndicator must run in the main thread.
+        # Run tkinter in a background thread, pystray blocks the main thread.
+        threading.Thread(target=_root.mainloop, daemon=True).start()
+        _icon_ready.wait(timeout=120)
+        if _icon is not None:
+            _icon.run()  # blocks until quit
 
 
 if __name__ == "__main__":
