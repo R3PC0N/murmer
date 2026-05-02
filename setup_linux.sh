@@ -27,6 +27,13 @@ echo -e "${GREEN}✓ Python $PY_VERSION${NC}"
 echo ""
 echo "Installing system packages..."
 sudo apt-get update -qq
+# girepository dev package name changed in Ubuntu 24.04
+if apt-cache show libgirepository-2.0-dev &>/dev/null 2>&1; then
+    GI_DEV_PKG="libgirepository-2.0-dev"
+else
+    GI_DEV_PKG="libgirepository1.0-dev"
+fi
+
 sudo apt-get install -y \
     python3-venv \
     python3-tk \
@@ -36,7 +43,7 @@ sudo apt-get install -y \
     libportaudio2 \
     libappindicator3-1 \
     gir1.2-appindicator3-0.1 \
-    libgirepository1.0-dev \
+    "$GI_DEV_PKG" \
     libcairo2-dev \
     gnome-shell-extension-appindicator
 
