@@ -250,9 +250,19 @@ class ServerManagerWindow:
 
         if tailscale_ip:
             url = f"http://{tailscale_ip}:8765"
-            ctk.CTkLabel(info_frame, text=f"Remote URL:  {url}",
+            url_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+            url_row.pack(fill="x", padx=16, pady=(4, 12))
+            ctk.CTkLabel(url_row, text="Remote URL:", font=ctk.CTkFont(size=12),
+                         text_color="#666", width=90, anchor="w").pack(side="left")
+            ctk.CTkLabel(url_row, text=url,
                          font=ctk.CTkFont(family="Consolas", size=11),
-                         text_color="#4a9eff").pack(anchor="w", padx=16, pady=(4, 12))
+                         text_color="#4a9eff").pack(side="left", padx=(0, 10))
+            self._url_copy_btn = ctk.CTkButton(
+                url_row, text="Copy", width=70, height=26,
+                font=ctk.CTkFont(size=11),
+                command=lambda u=url: self._copy_url(u),
+            )
+            self._url_copy_btn.pack(side="left")
         else:
             ctk.CTkLabel(info_frame,
                          text="Install Tailscale to connect from other devices.",
@@ -272,6 +282,12 @@ class ServerManagerWindow:
                      text_color="#666", width=90, anchor="w").pack(side="left")
         ctk.CTkLabel(row, text=value, font=ctk.CTkFont(size=12),
                      text_color=value_color, anchor="w").pack(side="left")
+
+    def _copy_url(self, url: str):
+        self._win.clipboard_clear()
+        self._win.clipboard_append(url)
+        self._url_copy_btn.configure(text="Copied!", fg_color="#2d6e2d")
+        self._win.after(2000, lambda: self._url_copy_btn.configure(text="Copy", fg_color=("#3B8ED0", "#1F6AA5")))
 
     def _copy_key(self, key: str):
         self._win.clipboard_clear()
