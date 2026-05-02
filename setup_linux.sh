@@ -43,6 +43,8 @@ sudo apt-get install -y \
     libportaudio2 \
     libappindicator3-1 \
     gir1.2-appindicator3-0.1 \
+    libayatana-appindicator3-1 \
+    gir1.2-ayatanaappindicator3-0.1 \
     "$GI_DEV_PKG" \
     libcairo2-dev \
     gnome-shell-extension-appindicator
