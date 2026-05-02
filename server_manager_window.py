@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import threading
 from pathlib import Path
 
@@ -8,11 +9,15 @@ import config
 import logger
 
 _SERVER_DIR = Path(__file__).parent / "server"
-_VENV_PYTHON = _SERVER_DIR / "venv" / "Scripts" / "python.exe"
+_VENV_PYTHON = _SERVER_DIR / "venv" / ("Scripts" if sys.platform == "win32" else "bin") / (
+    "python.exe" if sys.platform == "win32" else "python"
+)
 _SERVER_SCRIPT = _SERVER_DIR / "faster_whisper_server.py"
 _REQUIREMENTS = _SERVER_DIR / "requirements.txt"
 _ENV_FILE = _SERVER_DIR / ".env"
 _ENV_EXAMPLE = _SERVER_DIR / ".env.example"
+
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def _is_installed() -> bool:
@@ -20,14 +25,16 @@ def _is_installed() -> bool:
 
 
 def _open_firewall_port():
-    """Add an inbound Windows Firewall rule for port 8765 (requires elevation via UAC)."""
+    """Add an inbound Windows Firewall rule for port 8765 (Windows only, requires UAC)."""
+    if sys.platform != "win32":
+        return
     try:
         # First check if a rule already exists so we don't duplicate
         check = subprocess.run(
             ["netsh", "advfirewall", "firewall", "show", "rule",
              "name=Murmer Whisper Server"],
             capture_output=True, text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_NO_WINDOW,
         )
         if "Murmer Whisper Server" in check.stdout:
             return  # Rule already exists
@@ -41,7 +48,7 @@ def _open_firewall_port():
              "-Direction Inbound -Protocol TCP -LocalPort 8765 "
              '-Action Allow -ErrorAction SilentlyContinue\' '
              "-Verb RunAs -Wait"],
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_NO_WINDOW,
         )
         logger.log("Firewall rule added: port 8765 open for inbound connections.")
     except Exception as e:
@@ -49,13 +56,15 @@ def _open_firewall_port():
 
 
 def _get_tailscale_ip() -> str | None:
+    if sys.platform != "win32":
+        return None
     try:
         result = subprocess.run(
             ["powershell", "-Command",
              "Get-NetIPAddress | Where-Object {$_.IPAddress -like '100.*'} "
              "| Select-Object -First 1 -ExpandProperty IPAddress"],
             capture_output=True, text=True, timeout=5,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_NO_WINDOW,
         )
         ip = result.stdout.strip()
         return ip if ip else None
@@ -96,10 +105,25 @@ class ServerManagerWindow:
         win.after(100, win.lift)
         self._win = win
 
-        if not _is_installed():
+        if sys.platform != "win32":
+            self._show_linux_not_supported()
+        elif not _is_installed():
             self._show_not_installed()
         else:
             self._show_installed()
+
+    def _show_linux_not_supported(self):
+        win = self._win
+        ctk.CTkLabel(win, text="Whisper Server",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(40, 10))
+        ctk.CTkLabel(
+            win,
+            text="Server management is not available on Linux.\n\n"
+                 "To use a remote Whisper server, set it up manually\n"
+                 "using the files in the server/ folder, then configure\n"
+                 "Settings → Transcription → Mode: Remote.",
+            font=ctk.CTkFont(size=13), text_color="#aaa", justify="center",
+        ).pack(padx=32, pady=(0, 32))
 
     # ── Not installed ─────────────────────────────────────────────
 
@@ -172,7 +196,7 @@ class ServerManagerWindow:
             result = subprocess.run(
                 ["python", "-m", "venv", str(_SERVER_DIR / "venv")],
                 capture_output=True, text=True,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                creationflags=_NO_WINDOW,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"Venv creation failed:\n{result.stderr}")
@@ -182,7 +206,7 @@ class ServerManagerWindow:
             result = subprocess.run(
                 [str(_VENV_PYTHON), "-m", "pip", "install", "-r", str(_REQUIREMENTS), "--quiet"],
                 capture_output=True, text=True,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                creationflags=_NO_WINDOW,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"pip install failed:\n{result.stderr}")

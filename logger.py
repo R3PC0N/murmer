@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -8,7 +9,10 @@ from pathlib import Path
 #   RESULT      — final transcription output (shown in compact mode, saved to history)
 #   ERROR       — errors (shown in all modes)
 
-_HISTORY_FILE = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmer" / "history.log"
+if sys.platform == "win32":
+    _HISTORY_FILE = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmer" / "history.log"
+else:
+    _HISTORY_FILE = Path.home() / ".local" / "share" / "Murmer" / "history.log"
 _buffer: list[tuple[str, str, str]] = []  # (timestamp, level, message)
 _callbacks: list = []
 
@@ -52,7 +56,13 @@ def remove_callback(cb):
 
 
 def open_history():
-    if _HISTORY_FILE.exists():
-        subprocess.Popen(["notepad.exe", str(_HISTORY_FILE)])
+    if sys.platform == "win32":
+        if _HISTORY_FILE.exists():
+            subprocess.Popen(["notepad.exe", str(_HISTORY_FILE)])
+        else:
+            subprocess.Popen(["notepad.exe"])
     else:
-        subprocess.Popen(["notepad.exe"])
+        if _HISTORY_FILE.exists():
+            subprocess.Popen(["xdg-open", str(_HISTORY_FILE)])
+        else:
+            subprocess.Popen(["xdg-open", str(_HISTORY_FILE.parent)])

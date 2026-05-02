@@ -26,7 +26,6 @@ import re
 import subprocess
 import sys
 import threading
-import winsound
 from pathlib import Path
 
 import customtkinter as ctk
@@ -50,14 +49,36 @@ ctk.set_default_color_theme("dark-blue")
 
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
+# subprocess flag to hide console windows — only exists on Windows
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+# ── Audio feedback ────────────────────────────────────────────────────────────
+
+def _beep(frequency: int, duration_ms: int):
+    if sys.platform == "win32":
+        import winsound
+        winsound.Beep(frequency, duration_ms)
+    # Linux: silent — no reliable cross-desktop audio notification without extra deps
+
+
 # ── Single instance ───────────────────────────────────────────────────────────
 _mutex = None
+_lock_file = None
 
 def _ensure_single_instance():
-    global _mutex
-    _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmerSingleInstance")
-    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-        sys.exit(0)
+    global _mutex, _lock_file
+    if sys.platform == "win32":
+        _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmerSingleInstance")
+        if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+            sys.exit(0)
+    else:
+        import fcntl, tempfile
+        lock_path = Path(tempfile.gettempdir()) / "murmer.lock"
+        _lock_file = open(lock_path, "w")
+        try:
+            fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            sys.exit(0)
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
@@ -130,7 +151,7 @@ def _on_press():
         return
     _recording = True
     _update_icon()
-    winsound.Beep(880, 80)
+    _beep(880, 80)
     recorder.start()
     if config.SHOW_OVERLAY and overlay:
         overlay.show()
@@ -177,10 +198,10 @@ def _process(audio):
         else:
             logger.log(f"Result: {text}", level="RESULT")
         paste_text(text)
-        winsound.Beep(660, 80)
+        _beep(660, 80)
     except Exception as e:
         logger.log(f"Error: {e}", level="ERROR")
-        winsound.Beep(300, 250)
+        _beep(300, 250)
     finally:
         _processing = False
         _update_icon()
@@ -224,14 +245,16 @@ def _start_whisper_server():
     if _server_running():
         return
     script = Path(__file__).parent / "server" / "faster_whisper_server.py"
-    python = Path(__file__).parent / "server" / "venv" / "Scripts" / "python.exe"
+    venv_bin = "Scripts" if sys.platform == "win32" else "bin"
+    python_name = "python.exe" if sys.platform == "win32" else "python"
+    python = Path(__file__).parent / "server" / "venv" / venv_bin / python_name
     if not python.exists() or not script.exists():
-        logger.log("Whisper Server: bestanden niet gevonden. Voer setup_windows.bat uit.", level="ERROR")
+        logger.log("Whisper Server: files not found. Run the server setup first.", level="ERROR")
         return
     _server_proc = subprocess.Popen(
         [str(python), str(script)],
         cwd=str(script.parent),
-        creationflags=subprocess.CREATE_NO_WINDOW,
+        creationflags=_NO_WINDOW,
     )
     logger.log("Whisper Server gestart op poort 8765.")
     if _icon:
@@ -248,13 +271,16 @@ def _stop_whisper_server():
             _server_proc.kill()
     _server_proc = None
     # Kill any orphaned instances (e.g. manually started)
-    subprocess.run(
-        ["powershell", "-Command",
-         "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "
-         "'*faster_whisper_server*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
-        creationflags=subprocess.CREATE_NO_WINDOW,
-        capture_output=True,
-    )
+    if sys.platform == "win32":
+        subprocess.run(
+            ["powershell", "-Command",
+             "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "
+             "'*faster_whisper_server*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
+            creationflags=_NO_WINDOW,
+            capture_output=True,
+        )
+    else:
+        subprocess.run(["pkill", "-f", "faster_whisper_server"], capture_output=True)
     logger.log("Whisper Server gestopt.")
     if _icon:
         _icon.update_menu()
@@ -285,10 +311,17 @@ def _on_settings_saved(updates: dict):
 
 
 def _restart():
-    global _mutex
-    if _mutex:
-        ctypes.windll.kernel32.CloseHandle(_mutex)
-        _mutex = None
+    global _mutex, _lock_file
+    if sys.platform == "win32":
+        if _mutex:
+            ctypes.windll.kernel32.CloseHandle(_mutex)
+            _mutex = None
+    else:
+        if _lock_file:
+            import fcntl
+            fcntl.flock(_lock_file, fcntl.LOCK_UN)
+            _lock_file.close()
+            _lock_file = None
     keyboard.unhook_all()
     if _icon:
         _icon.stop()
