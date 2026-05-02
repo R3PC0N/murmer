@@ -227,7 +227,15 @@ class ServerManagerWindow:
             masked = api_key[:6] + "•" * (len(api_key) - 6)
             self._info_row(info_frame, "API key", masked, "#4CAF50")
         else:
-            self._info_row(info_frame, "API key", "Not set — edit server\\.env", "#E07B39")
+            key_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+            key_row.pack(fill="x", padx=16, pady=2)
+            ctk.CTkLabel(key_row, text="API key:", font=ctk.CTkFont(size=12),
+                         text_color="#666", width=90, anchor="w").pack(side="left")
+            ctk.CTkLabel(key_row, text="Not set", font=ctk.CTkFont(size=12),
+                         text_color="#E07B39").pack(side="left", padx=(0, 10))
+            ctk.CTkButton(key_row, text="Generate", width=90, height=26,
+                          font=ctk.CTkFont(size=11),
+                          command=self._generate_api_key).pack(side="left")
 
         if tailscale_ip:
             url = f"http://{tailscale_ip}:8765"
@@ -253,6 +261,30 @@ class ServerManagerWindow:
                      text_color="#666", width=90, anchor="w").pack(side="left")
         ctk.CTkLabel(row, text=value, font=ctk.CTkFont(size=12),
                      text_color=value_color, anchor="w").pack(side="left")
+
+    def _generate_api_key(self):
+        import secrets
+        key = secrets.token_hex(32)
+        try:
+            if _ENV_FILE.exists():
+                lines = _ENV_FILE.read_text(encoding="utf-8").splitlines()
+                new_lines = []
+                replaced = False
+                for line in lines:
+                    if line.startswith("MURMER_API_KEY="):
+                        new_lines.append(f"MURMER_API_KEY={key}")
+                        replaced = True
+                    else:
+                        new_lines.append(line)
+                if not replaced:
+                    new_lines.append(f"MURMER_API_KEY={key}")
+                _ENV_FILE.write_text("\n".join(new_lines), encoding="utf-8")
+            else:
+                _ENV_FILE.write_text(f"MURMER_API_KEY={key}\n", encoding="utf-8")
+            logger.log("Whisper Server API key gegenereerd en opgeslagen.")
+        except Exception as e:
+            logger.log(f"API key opslaan mislukt: {e}", level="ERROR")
+        self._show_installed()
 
     def _do_start(self):
         self._start_server()
