@@ -147,7 +147,7 @@ class SettingsWindow:
         self._capture_btn.pack(side="left")
 
         self._autostart_var = ctk.BooleanVar(value=autostart.is_enabled())
-        self._toggle_row(f, "Start with Windows", self._autostart_var)
+        self._toggle_row(f, "Start with System", self._autostart_var)
 
     # ── Section: Audio ────────────────────────────────────────────
 

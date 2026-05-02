@@ -69,7 +69,13 @@ def _beep(frequency: int, duration_ms: int):
     if sys.platform == "win32":
         import winsound
         winsound.Beep(frequency, duration_ms)
-    # Linux: silent — no reliable cross-desktop audio notification without extra deps
+    else:
+        import numpy as np
+        import sounddevice as sd
+        n = int(44100 * duration_ms / 1000)
+        t = np.linspace(0, duration_ms / 1000, n, endpoint=False)
+        tone = (np.sin(2 * np.pi * frequency * t) * 0.3).astype(np.float32)
+        sd.play(tone, 44100)
 
 
 # ── Single instance ───────────────────────────────────────────────────────────
