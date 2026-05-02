@@ -147,7 +147,7 @@ class SettingsWindow:
         self._capture_btn.pack(side="left")
 
         self._autostart_var = ctk.BooleanVar(value=autostart.is_enabled())
-        self._toggle_row(f, "Start with Windows", self._autostart_var)
+        self._toggle_row(f, "Start with System", self._autostart_var)
 
     # ── Section: Audio ────────────────────────────────────────────
 
@@ -230,7 +230,7 @@ class SettingsWindow:
         self._label(self._remote_frame, "Server URL")
         self._remote_url_var = ctk.StringVar(value=config.REMOTE_WHISPER_URL)
         ctk.CTkEntry(self._remote_frame, textvariable=self._remote_url_var,
-                     width=420, placeholder_text="http://100.x.x.x:8765").pack(anchor="w", pady=(0, 16))
+                     width=420, placeholder_text="http://192.168.1.x:8765 or https://yourserver.com").pack(anchor="w", pady=(0, 16))
         self._label(self._remote_frame, "API key")
         self._remote_key_var = ctk.StringVar(value=config.REMOTE_WHISPER_API_KEY)
         ctk.CTkEntry(self._remote_frame, textvariable=self._remote_key_var,
@@ -330,6 +330,9 @@ class SettingsWindow:
         self._overlay_var = ctk.BooleanVar(value=config.SHOW_OVERLAY)
         self._toggle_row(f, "Show recording overlay", self._overlay_var)
 
+        self._beep_var = ctk.BooleanVar(value=config.BEEP_ENABLED)
+        self._toggle_row(f, "Sound feedback (beep on record/done)", self._beep_var)
+
     # ── Section: Profile ──────────────────────────────────────────
 
     def _build_profile(self):
@@ -411,7 +414,23 @@ class SettingsWindow:
         threading.Thread(target=self._capture_key, daemon=True).start()
 
     def _capture_key(self):
-        key = keyboard.read_key(suppress=True)
+        import sys
+        if sys.platform == "win32":
+            key = keyboard.read_key(suppress=True)
+        else:
+            from pynput import keyboard as _pk
+            captured = [None]
+
+            def on_press(k):
+                try:
+                    captured[0] = k.name if hasattr(k, 'name') else k.char
+                except AttributeError:
+                    captured[0] = str(k)
+                return False  # stop listener after first key
+
+            with _pk.Listener(on_press=on_press) as _listener:
+                _listener.join()
+            key = captured[0] or "f9"
         self._win.after(0, lambda: self._hotkey_var.set(key))
         self._win.after(0, lambda: self._capture_btn.configure(
             text="Capture key", state="normal"))
@@ -429,6 +448,7 @@ class SettingsWindow:
             "REMOTE_WHISPER_API_KEY": self._remote_key_var.get().strip(),
             "AI_CLEANUP_ENABLED":     self._cleanup_var.get(),
             "ANTHROPIC_API_KEY":      self._apikey_var.get().strip(),
+            "BEEP_ENABLED":           self._beep_var.get(),
             "SHOW_OVERLAY":           self._overlay_var.get(),
             "AUTO_START":             self._autostart_var.get(),
             "TRANSCRIPTION_STYLE":    self._style_var.get(),

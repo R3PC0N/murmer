@@ -1,3 +1,14 @@
+# ── X11 thread safety (must be before any tkinter or GTK import) ─────────────
+import sys as _sys
+if _sys.platform != "win32":
+    import ctypes as _ctypes
+    try:
+        _ctypes.cdll.LoadLibrary("libX11.so.6").XInitThreads()
+    except Exception:
+        pass
+    del _ctypes
+del _sys
+
 # ── Early window (shown immediately before heavy imports) ─────────────────────
 import tkinter as _tk
 
@@ -26,7 +37,6 @@ import re
 import subprocess
 import sys
 import threading
-import winsound
 from pathlib import Path
 
 import customtkinter as ctk
@@ -50,14 +60,45 @@ ctk.set_default_color_theme("dark-blue")
 
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
+# subprocess flag to hide console windows — only exists on Windows
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+# ── Audio feedback ────────────────────────────────────────────────────────────
+
+def _beep(frequency: int, duration_ms: int):
+    if not config.BEEP_ENABLED:
+        return
+    if sys.platform == "win32":
+        import winsound
+        winsound.Beep(frequency, duration_ms)
+    else:
+        import numpy as np
+        import sounddevice as sd
+        n = int(44100 * duration_ms / 1000)
+        t = np.linspace(0, duration_ms / 1000, n, endpoint=False)
+        tone = (np.sin(2 * np.pi * frequency * t) * 0.3).astype(np.float32)
+        sd.play(tone, 44100)
+
+
 # ── Single instance ───────────────────────────────────────────────────────────
 _mutex = None
+_lock_file = None
+_pynput_listener = None  # Linux only
 
 def _ensure_single_instance():
-    global _mutex
-    _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmerSingleInstance")
-    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-        sys.exit(0)
+    global _mutex, _lock_file
+    if sys.platform == "win32":
+        _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmerSingleInstance")
+        if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+            sys.exit(0)
+    else:
+        import fcntl, tempfile
+        lock_path = Path(tempfile.gettempdir()) / "murmer.lock"
+        _lock_file = open(lock_path, "w")
+        try:
+            fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            sys.exit(0)
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
@@ -130,7 +171,7 @@ def _on_press():
         return
     _recording = True
     _update_icon()
-    winsound.Beep(880, 80)
+    _beep(880, 80)
     recorder.start()
     if config.SHOW_OVERLAY and overlay:
         overlay.show()
@@ -177,10 +218,10 @@ def _process(audio):
         else:
             logger.log(f"Result: {text}", level="RESULT")
         paste_text(text)
-        winsound.Beep(660, 80)
+        _beep(660, 80)
     except Exception as e:
         logger.log(f"Error: {e}", level="ERROR")
-        winsound.Beep(300, 250)
+        _beep(300, 250)
     finally:
         _processing = False
         _update_icon()
@@ -188,20 +229,79 @@ def _process(audio):
 
 # ── Hotkey listener ───────────────────────────────────────────────────────────
 
+def _pynput_key(key_str: str):
+    """Map keyboard-lib key string to a pynput Key constant, or return the string for char keys."""
+    from pynput import keyboard as _pk
+    special = {
+        **{f'f{i}': getattr(_pk.Key, f'f{i}') for i in range(1, 13)},
+        'space': _pk.Key.space, 'enter': _pk.Key.enter, 'tab': _pk.Key.tab,
+        'backspace': _pk.Key.backspace, 'delete': _pk.Key.delete,
+        'esc': _pk.Key.esc, 'escape': _pk.Key.esc,
+        'ctrl': _pk.Key.ctrl, 'ctrl_l': _pk.Key.ctrl_l, 'ctrl_r': _pk.Key.ctrl_r,
+        'alt': _pk.Key.alt, 'alt_l': _pk.Key.alt_l, 'alt_r': _pk.Key.alt_r,
+        'shift': _pk.Key.shift, 'shift_l': _pk.Key.shift_l, 'shift_r': _pk.Key.shift_r,
+        'caps_lock': _pk.Key.caps_lock,
+        'up': _pk.Key.up, 'down': _pk.Key.down, 'left': _pk.Key.left, 'right': _pk.Key.right,
+        'home': _pk.Key.home, 'end': _pk.Key.end,
+        'page_up': _pk.Key.page_up, 'page_down': _pk.Key.page_down,
+    }
+    return special.get(key_str.lower(), key_str.lower())
+
+
+def _pynput_key_matches(key, target) -> bool:
+    from pynput import keyboard as _pk
+    if isinstance(target, _pk.Key):
+        return key == target
+    try:
+        return key.char == target
+    except AttributeError:
+        return False
+
+
 def _keyboard_listener():
+    global _pynput_listener
     _held = False
 
-    def on_key_event(event):
-        nonlocal _held
-        if event.event_type == keyboard.KEY_DOWN and not _held:
-            _held = True
-            threading.Thread(target=_on_press, daemon=True).start()
-        elif event.event_type == keyboard.KEY_UP and _held:
-            _held = False
-            threading.Thread(target=_on_release, daemon=True).start()
+    if sys.platform == "win32":
+        def on_key_event(event):
+            nonlocal _held
+            if event.event_type == keyboard.KEY_DOWN and not _held:
+                _held = True
+                threading.Thread(target=_on_press, daemon=True).start()
+            elif event.event_type == keyboard.KEY_UP and _held:
+                _held = False
+                threading.Thread(target=_on_release, daemon=True).start()
+        keyboard.hook_key(config.PUSH_TO_TALK_KEY, on_key_event, suppress=True)
+        keyboard.wait()
+    else:
+        from pynput import keyboard as _pk
+        target = _pynput_key(config.PUSH_TO_TALK_KEY)
 
-    keyboard.hook_key(config.PUSH_TO_TALK_KEY, on_key_event, suppress=True)
-    keyboard.wait()
+        def on_press(key):
+            nonlocal _held
+            if _pynput_key_matches(key, target) and not _held:
+                _held = True
+                threading.Thread(target=_on_press, daemon=True).start()
+
+        def on_release(key):
+            nonlocal _held
+            if _pynput_key_matches(key, target) and _held:
+                _held = False
+                threading.Thread(target=_on_release, daemon=True).start()
+
+        with _pk.Listener(on_press=on_press, on_release=on_release) as listener:
+            _pynput_listener = listener
+            listener.join()
+        _pynput_listener = None
+
+
+def _stop_hotkey_listener():
+    global _pynput_listener
+    if sys.platform == "win32":
+        keyboard.unhook_all()
+    else:
+        if _pynput_listener is not None:
+            _pynput_listener.stop()
 
 
 # ── Settings & restart ────────────────────────────────────────────────────────
@@ -224,14 +324,16 @@ def _start_whisper_server():
     if _server_running():
         return
     script = Path(__file__).parent / "server" / "faster_whisper_server.py"
-    python = Path(__file__).parent / "server" / "venv" / "Scripts" / "python.exe"
+    venv_bin = "Scripts" if sys.platform == "win32" else "bin"
+    python_name = "python.exe" if sys.platform == "win32" else "python"
+    python = Path(__file__).parent / "server" / "venv" / venv_bin / python_name
     if not python.exists() or not script.exists():
-        logger.log("Whisper Server: bestanden niet gevonden. Voer setup_windows.bat uit.", level="ERROR")
+        logger.log("Whisper Server: files not found. Run the server setup first.", level="ERROR")
         return
     _server_proc = subprocess.Popen(
         [str(python), str(script)],
         cwd=str(script.parent),
-        creationflags=subprocess.CREATE_NO_WINDOW,
+        creationflags=_NO_WINDOW,
     )
     logger.log("Whisper Server gestart op poort 8765.")
     if _icon:
@@ -248,13 +350,16 @@ def _stop_whisper_server():
             _server_proc.kill()
     _server_proc = None
     # Kill any orphaned instances (e.g. manually started)
-    subprocess.run(
-        ["powershell", "-Command",
-         "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "
-         "'*faster_whisper_server*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
-        creationflags=subprocess.CREATE_NO_WINDOW,
-        capture_output=True,
-    )
+    if sys.platform == "win32":
+        subprocess.run(
+            ["powershell", "-Command",
+             "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "
+             "'*faster_whisper_server*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
+            creationflags=_NO_WINDOW,
+            capture_output=True,
+        )
+    else:
+        subprocess.run(["pkill", "-f", "faster_whisper_server"], capture_output=True)
     logger.log("Whisper Server gestopt.")
     if _icon:
         _icon.update_menu()
@@ -278,18 +383,25 @@ def _open_server_manager():
 def _on_settings_saved(updates: dict):
     _load_cleaner()
     if "PUSH_TO_TALK_KEY" in updates:
-        keyboard.unhook_all()
+        _stop_hotkey_listener()
         threading.Thread(target=_keyboard_listener, daemon=True).start()
         logger.log(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
     logger.log("Settings saved.")
 
 
 def _restart():
-    global _mutex
-    if _mutex:
-        ctypes.windll.kernel32.CloseHandle(_mutex)
-        _mutex = None
-    keyboard.unhook_all()
+    global _mutex, _lock_file
+    if sys.platform == "win32":
+        if _mutex:
+            ctypes.windll.kernel32.CloseHandle(_mutex)
+            _mutex = None
+    else:
+        if _lock_file:
+            import fcntl
+            fcntl.flock(_lock_file, fcntl.LOCK_UN)
+            _lock_file.close()
+            _lock_file = None
+    _stop_hotkey_listener()
     if _icon:
         _icon.stop()
     if _root:
@@ -304,7 +416,7 @@ def _do_restart():
 # ── Quit ──────────────────────────────────────────────────────────────────────
 
 def _quit():
-    keyboard.unhook_all()
+    _stop_hotkey_listener()
     if _server_running():
         _stop_whisper_server()
     if _icon:
@@ -356,7 +468,18 @@ def _background_init(splash: SplashScreen):
     _icon = pystray.Icon("murmer", _make_icon(), "Murmer", menu)
 
     threading.Thread(target=_keyboard_listener, daemon=True).start()
-    _icon.run_detached()
+
+    if sys.platform == "win32":
+        _icon.run_detached()
+    else:
+        # Push the default GLib context as thread-default so AppIndicator's
+        # DBus operations use the same context regardless of which thread runs them.
+        def _run_pystray_linux():
+            from gi.repository import GLib
+            GLib.MainContext.default().push_thread_default()
+            _icon.run()
+
+        threading.Thread(target=_run_pystray_linux, daemon=True).start()
 
     _root.after(0, splash.hide)
 

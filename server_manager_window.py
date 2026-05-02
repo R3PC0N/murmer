@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import threading
 from pathlib import Path
 
@@ -8,11 +9,15 @@ import config
 import logger
 
 _SERVER_DIR = Path(__file__).parent / "server"
-_VENV_PYTHON = _SERVER_DIR / "venv" / "Scripts" / "python.exe"
+_VENV_PYTHON = _SERVER_DIR / "venv" / ("Scripts" if sys.platform == "win32" else "bin") / (
+    "python.exe" if sys.platform == "win32" else "python"
+)
 _SERVER_SCRIPT = _SERVER_DIR / "faster_whisper_server.py"
 _REQUIREMENTS = _SERVER_DIR / "requirements.txt"
 _ENV_FILE = _SERVER_DIR / ".env"
 _ENV_EXAMPLE = _SERVER_DIR / ".env.example"
+
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def _is_installed() -> bool:
@@ -20,14 +25,16 @@ def _is_installed() -> bool:
 
 
 def _open_firewall_port():
-    """Add an inbound Windows Firewall rule for port 8765 (requires elevation via UAC)."""
+    """Add an inbound Windows Firewall rule for port 8765 (Windows only, requires UAC)."""
+    if sys.platform != "win32":
+        return
     try:
         # First check if a rule already exists so we don't duplicate
         check = subprocess.run(
             ["netsh", "advfirewall", "firewall", "show", "rule",
              "name=Murmer Whisper Server"],
             capture_output=True, text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_NO_WINDOW,
         )
         if "Murmer Whisper Server" in check.stdout:
             return  # Rule already exists
@@ -41,7 +48,7 @@ def _open_firewall_port():
              "-Direction Inbound -Protocol TCP -LocalPort 8765 "
              '-Action Allow -ErrorAction SilentlyContinue\' '
              "-Verb RunAs -Wait"],
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_NO_WINDOW,
         )
         logger.log("Firewall rule added: port 8765 open for inbound connections.")
     except Exception as e:
@@ -49,16 +56,30 @@ def _open_firewall_port():
 
 
 def _get_tailscale_ip() -> str | None:
+    if sys.platform != "win32":
+        return None
     try:
         result = subprocess.run(
             ["powershell", "-Command",
              "Get-NetIPAddress | Where-Object {$_.IPAddress -like '100.*'} "
              "| Select-Object -First 1 -ExpandProperty IPAddress"],
             capture_output=True, text=True, timeout=5,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_NO_WINDOW,
         )
         ip = result.stdout.strip()
         return ip if ip else None
+    except Exception:
+        return None
+
+
+def _get_local_ip() -> str | None:
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
     except Exception:
         return None
 
@@ -96,10 +117,129 @@ class ServerManagerWindow:
         win.after(100, win.lift)
         self._win = win
 
-        if not _is_installed():
+        if sys.platform != "win32":
+            if _is_installed():
+                self._show_linux_installed()
+            else:
+                self._show_linux_not_installed()
+        elif not _is_installed():
             self._show_not_installed()
         else:
             self._show_installed()
+
+    def _show_linux_not_installed(self):
+        win = self._win
+        ctk.CTkLabel(win, text="Whisper Server",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(24, 4))
+        ctk.CTkLabel(win, text="Turn this PC into a transcription server",
+                     font=ctk.CTkFont(size=13), text_color="#888").pack(pady=(0, 16))
+
+        scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=24, pady=(0, 12))
+
+        self._linux_step(scroll, "1. Set up the server",
+            "cd server\n"
+            "python3 -m venv venv\n"
+            "source venv/bin/activate\n"
+            "pip install -r requirements.txt\n"
+            "cp .env.example .env\n"
+            "nano .env   # set MURMER_API_KEY"
+        )
+        self._linux_step(scroll, "2. Start manually",
+            "python faster_whisper_server.py"
+        )
+        self._linux_step(scroll, "3. Or run as a systemd service",
+            "sudo cp murmer-whisper.service /etc/systemd/system/\n"
+            "sudo systemctl enable --now murmer-whisper"
+        )
+
+        ctk.CTkLabel(win,
+                     text="Once running, configure Settings → Transcription → Mode: Remote.",
+                     font=ctk.CTkFont(size=11), text_color="#666").pack(padx=24, pady=(0, 12))
+
+    def _linux_step(self, parent, title: str, commands: str):
+        ctk.CTkLabel(parent, text=title, font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="#aaa").pack(anchor="w", pady=(10, 4))
+        lines = commands.count("\n") + 1
+        box = ctk.CTkTextbox(parent, height=lines * 20 + 16,
+                             font=ctk.CTkFont(family="Consolas", size=12),
+                             fg_color="#1a1a1e", corner_radius=6, wrap="none")
+        box.pack(fill="x", pady=(0, 4))
+        box.insert("1.0", commands)
+        box.configure(state="disabled")
+
+    def _show_linux_installed(self):
+        self._clear()
+        win = self._win
+
+        running = self._get_server_running()
+
+        ctk.CTkLabel(win, text="Whisper Server",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(24, 4))
+
+        status_color = "#4CAF50" if running else "#888"
+        status_text = "● Running" if running else "○ Stopped"
+        ctk.CTkLabel(win, text=status_text, font=ctk.CTkFont(size=13),
+                     text_color=status_color).pack(pady=(0, 16))
+
+        if running:
+            ctk.CTkButton(win, text="Stop Server", height=38, width=160,
+                          fg_color="#8B2020", hover_color="#6B1818",
+                          font=ctk.CTkFont(size=13),
+                          command=self._linux_stop).pack(pady=(0, 20))
+        else:
+            ctk.CTkButton(win, text="Start Server", height=38, width=160,
+                          font=ctk.CTkFont(size=13),
+                          command=self._linux_start).pack(pady=(0, 20))
+
+        # Connection info
+        info_frame = ctk.CTkFrame(win, corner_radius=8)
+        info_frame.pack(fill="x", padx=24, pady=(0, 16))
+
+        ctk.CTkLabel(info_frame, text="Connection details",
+                     font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="#aaa").pack(anchor="w", padx=16, pady=(12, 6))
+
+        local_ip = _get_local_ip()
+        ip_text = local_ip if local_ip else "Not detected"
+        ip_color = "#ffffff" if local_ip else "#888"
+        self._info_row(info_frame, "Local IP", ip_text, ip_color)
+        self._info_row(info_frame, "Port", "8765")
+
+        api_key = _get_api_key()
+        if api_key:
+            masked = api_key[:6] + "•" * (len(api_key) - 6)
+            key_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+            key_row.pack(fill="x", padx=16, pady=(2, 12))
+            ctk.CTkLabel(key_row, text="API key:", font=ctk.CTkFont(size=12),
+                         text_color="#666", width=90, anchor="w").pack(side="left")
+            ctk.CTkLabel(key_row, text=masked, font=ctk.CTkFont(size=12),
+                         text_color="#4CAF50").pack(side="left", padx=(0, 10))
+            self._copy_btn = ctk.CTkButton(
+                key_row, text="Copy", width=70, height=26,
+                font=ctk.CTkFont(size=11),
+                command=lambda k=api_key: self._copy_key(k),
+            )
+            self._copy_btn.pack(side="left")
+        else:
+            ctk.CTkLabel(info_frame,
+                         text="API key not set — edit server/.env and set MURMER_API_KEY.",
+                         font=ctk.CTkFont(size=11), text_color="#E07B39",
+                         justify="left").pack(anchor="w", padx=16, pady=(2, 12))
+
+        ctk.CTkLabel(win,
+                     text="On your other device: Settings → Transcription → Remote\n"
+                          "Enter the URL (http://IP:8765) and API key above.",
+                     font=ctk.CTkFont(size=11), text_color="#666",
+                     justify="left").pack(padx=24, pady=(4, 0))
+
+    def _linux_start(self):
+        self._start_server()
+        self._show_linux_installed()
+
+    def _linux_stop(self):
+        self._stop_server()
+        self._show_linux_installed()
 
     # ── Not installed ─────────────────────────────────────────────
 
@@ -118,9 +258,10 @@ class ServerManagerWindow:
             "use this PC's GPU for fast voice transcription.\n\n"
             "How it works:\n"
             "  1. Install the server on this PC (one time)\n"
-            "  2. Connect your other devices via Tailscale\n"
+            "  2. Make this PC reachable from your other device\n"
+            "     (local network, Tailscale, or a reverse proxy)\n"
             "  3. In Murmer Settings, set Mode to Remote and\n"
-            "     enter this PC's Tailscale IP + the API key\n\n"
+            "     enter this PC's URL + the API key\n\n"
             "The server runs silently in the background and\n"
             "can be started or stopped from this menu."
         )
@@ -172,7 +313,7 @@ class ServerManagerWindow:
             result = subprocess.run(
                 ["python", "-m", "venv", str(_SERVER_DIR / "venv")],
                 capture_output=True, text=True,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                creationflags=_NO_WINDOW,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"Venv creation failed:\n{result.stderr}")
@@ -182,7 +323,7 @@ class ServerManagerWindow:
             result = subprocess.run(
                 [str(_VENV_PYTHON), "-m", "pip", "install", "-r", str(_REQUIREMENTS), "--quiet"],
                 capture_output=True, text=True,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                creationflags=_NO_WINDOW,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"pip install failed:\n{result.stderr}")
@@ -250,8 +391,8 @@ class ServerManagerWindow:
                      text_color="#aaa").pack(anchor="w", padx=16, pady=(12, 6))
 
         tailscale_ip = _get_tailscale_ip()
-        ip_text = tailscale_ip if tailscale_ip else "Tailscale not detected"
-        ip_color = "#ffffff" if tailscale_ip else "#E07B39"
+        ip_text = tailscale_ip if tailscale_ip else "Not detected"
+        ip_color = "#ffffff" if tailscale_ip else "#888"
 
         self._info_row(info_frame, "Tailscale IP", ip_text, ip_color)
         self._info_row(info_frame, "Port", "8765")
@@ -299,8 +440,9 @@ class ServerManagerWindow:
             self._url_copy_btn.pack(side="left")
         else:
             ctk.CTkLabel(info_frame,
-                         text="Install Tailscale to connect from other devices.",
-                         font=ctk.CTkFont(size=11), text_color="#E07B39").pack(
+                         text="Connect via your local network, Tailscale, or a reverse proxy.\n"
+                              "Enter the URL manually in Settings → Transcription.",
+                         font=ctk.CTkFont(size=11), text_color="#888", justify="left").pack(
                 anchor="w", padx=16, pady=(4, 12))
 
         # Autostart toggle

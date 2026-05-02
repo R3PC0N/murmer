@@ -1,6 +1,6 @@
 # Murmer
 
-**Free, local voice dictation for Windows - a Murmur alternative.**
+**Free, local voice dictation for Windows and Linux.**
 
 Hold a key, speak, release. Murmer transcribes your voice using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and pastes the result into whatever app you have focused. Optionally, Claude Haiku cleans up filler words and fixes punctuation before pasting.
 
@@ -12,7 +12,7 @@ No subscription. No cloud. Your audio never leaves your machine - unless you cho
 
 - **Push-to-talk** - hold any configurable key to record, release to transcribe and paste
 - **Local transcription** - runs Whisper entirely on your own GPU or CPU, no internet required
-- **Remote transcription** - offload transcription to another PC (e.g. a desktop with a powerful GPU) over [Tailscale](https://tailscale.com)
+- **Remote transcription** - offload transcription to another machine over your local network, a VPN, or a reverse proxy
 - **AI cleanup** - Claude Haiku removes filler words, fixes punctuation and capitalization, and preserves your language (Dutch, English, or mixed)
 - **Style profiles** - choose Formal, Informal, Technical, or write your own style instruction
 - **User profile** - tell Haiku who you are so it can apply context to every transcription
@@ -20,22 +20,25 @@ No subscription. No cloud. Your audio never leaves your machine - unless you cho
 - **Saved servers** - store multiple remote server configurations and switch between them instantly
 - **Audio device selection** - choose any input device from settings
 - **Activity log** - compact or debug view of every transcription session; full history saved to disk
-- **Windows Whisper Server manager** - install, start, stop and configure a local Whisper server directly from the tray icon
+- **Whisper Server manager** - install, start, stop and configure a local Whisper server directly from the tray icon (Windows); status and connection info on Linux
 - **System tray** - runs silently in the background, waveform icon changes colour for idle / recording / processing
-- **Single installer** - one `.exe` sets up a Python virtual environment and all dependencies automatically
+- **Single installer** - one `.exe` sets up a Python virtual environment and all dependencies automatically (Windows); `setup_linux.sh` for Linux
 
 ---
 
 ## Requirements
 
-### Always required
+### Windows
 
 | Dependency | Version | Download |
 |---|---|---|
-| **Windows** | 10 or 11 (64-bit) | - |
 | **Python** | 3.10 or newer | [python.org/downloads](https://www.python.org/downloads/) |
 
 > ⚠ During Python installation, tick **"Add Python to PATH"**.
+
+### Linux (Ubuntu / Debian / Zorin OS)
+
+Run `setup_linux.sh` — it handles everything automatically. See [Linux setup](#linux-setup) below.
 
 ### For GPU transcription (recommended)
 
@@ -52,15 +55,11 @@ Without CUDA, Murmer falls back to CPU transcription automatically. The installe
 |---|---|---|
 | **Anthropic API key** | Free tier available | [console.anthropic.com](https://console.anthropic.com) |
 
-### For remote transcription (optional)
-
-| Dependency | Notes | Download |
-|---|---|---|
-| **Tailscale** | Install on both devices | [tailscale.com/download](https://tailscale.com/download) |
-
 ---
 
 ## Installation
+
+### Windows
 
 1. Download the latest installer from [Releases](https://github.com/R3PC0N/murmer/releases)
 2. Run `Murmer-Setup-vX.X.exe`
@@ -70,17 +69,37 @@ Without CUDA, Murmer falls back to CPU transcription automatically. The installe
    - Create a Start Menu shortcut (and optionally a desktop shortcut)
 4. On first launch, Murmer downloads the Whisper speech model (~300 MB for `medium`, ~1.5 GB for `large-v3`). A loading screen will appear - just wait until it disappears.
 
+### Linux setup
+
+```bash
+git clone https://github.com/R3PC0N/murmer.git
+cd murmer
+bash setup_linux.sh
+```
+
+The script installs all system packages, creates a virtual environment, installs Python dependencies, enables the AppIndicator tray extension, and adds your user to the `input` group for global hotkeys.
+
+> ⚠ After setup, **log out and back in** once so the hotkey takes effect (input group).
+
+Start Murmer:
+
+```bash
+./murmer.sh
+```
+
 ---
 
 ## First-run setup
 
 ### 1. AI cleanup (optional but recommended)
 
-Open `%LOCALAPPDATA%\Murmer\.env` in a text editor and add your Anthropic API key:
+**Windows:** open `%LOCALAPPDATA%\Murmer\.env` in a text editor and add your key:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
+
+**Linux:** open `.env` in the Murmer folder and add the same line.
 
 Or enter it directly in **Settings → AI Cleanup**.
 
@@ -98,11 +117,11 @@ Open Settings from the tray icon (right-click → Settings).
 
 | Section | What you can configure |
 |---|---|
-| **General** | Push-to-talk key, start with Windows |
+| **General** | Push-to-talk key, start with system |
 | **Audio** | Input device |
 | **Transcription** | Local or remote mode, Whisper model and device, saved remote servers |
 | **AI Cleanup** | Enable/disable Claude Haiku, Anthropic API key |
-| **Display** | Recording overlay |
+| **Display** | Recording overlay, sound feedback |
 | **Profile** | Transcription style, user context, word corrections |
 
 ### Word corrections
@@ -111,7 +130,6 @@ In **Profile → Word corrections**, add one correction per line:
 
 ```
 murmer=Murmer
-tailscale=Tailscale
 cuda=CUDA
 ```
 
@@ -139,26 +157,41 @@ Murmer can send audio to a Whisper server running on another machine - useful if
 
 1. The server runs a FastAPI service that accepts audio and returns transcribed text
 2. Communication is secured with an API key
-3. Devices connect to each other over [Tailscale](https://tailscale.com), a zero-config VPN
+3. The client sends a small WAV file over HTTP and receives the transcribed text back
 
-### Setting up Tailscale
+All you need is for the client to be able to reach the server's URL. How you arrange that is up to you.
 
-1. Install Tailscale on both devices: [tailscale.com/download](https://tailscale.com/download)
-2. Sign in with the same account on both
-3. Both devices will appear in your Tailscale admin panel at [login.tailscale.com/admin/machines](https://login.tailscale.com/admin/machines)
-4. Note the `100.x.x.x` IP address of the server machine
+### Connecting client to server
 
-> ⚠ If you use a VPN (e.g. Mullvad) on the server machine, add Tailscale to its split-tunnel exclusions so both can run simultaneously.
+There are several ways to make the server reachable from another device:
+
+**Local network** — if both devices are on the same Wi-Fi or LAN, use the server's local IP directly:
+```
+http://192.168.1.x:8765
+```
+
+**Tailscale** — a free zero-config VPN. Install it on both devices, sign in with the same account, and use the server's `100.x.x.x` Tailscale IP:
+```
+http://100.x.x.x:8765
+```
+> If you use a VPN (e.g. Mullvad), add Tailscale to its split-tunnel exclusions so both can run simultaneously.
+
+**Reverse proxy** — if you run Caddy, Nginx, or a similar proxy, add a virtual host that forwards to port 8765. This lets you use a domain name with HTTPS and works from any network without installing extra software:
+```
+https://whisper.yourdomain.com
+```
+
+**Direct port forwarding** — open port 8765 (or 443 via a reverse proxy) on your router and point it at the server machine. Combine with a dynamic DNS service if your home IP changes.
 
 ### Windows server (via Murmer UI)
 
-If your server is another Windows PC with Murmer installed:
+If your server is a Windows PC with Murmer installed:
 
 1. On the server PC: right-click the Murmer tray icon → **Whisper Server...**
 2. Click **Install Server** (one-time setup, downloads ~500 MB)
 3. Click **Generate** to create an API key
 4. Note the **Remote URL** and **API key** shown in the window
-5. On the client PC: open **Settings → Transcription**, switch to **Remote**, paste the URL and key
+5. On the client: open **Settings → Transcription**, switch to **Remote**, paste the URL and key
 6. Click **Save current as...** to save this server for quick access later
 
 The server can be started and stopped from the tray icon at any time. Enable **"Start server when Murmer launches"** to have it start automatically.
@@ -168,20 +201,12 @@ The server can be started and stopped from the tray icon at any time. Enable **"
 Requirements: Python 3.10+, CUDA 12.x (for GPU), or CPU-only.
 
 ```bash
-# Clone and enter the server directory
-git clone https://github.com/R3PC0N/murmer.git
 cd murmer/server
-
-# Create a virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure
 cp .env.example .env
-nano .env  # Set MURMER_API_KEY and optionally WHISPER_MODEL, WHISPER_DEVICE
+nano .env  # set MURMER_API_KEY and optionally WHISPER_MODEL, WHISPER_DEVICE
 ```
 
 **.env example:**
@@ -224,24 +249,31 @@ Right-click the tray icon → **Activity log** to see recent transcriptions.
 - **Compact** - shows transcription results and errors only
 - **Debug** - shows every step including raw Whisper output before cleanup
 
-Full history is saved to `%LOCALAPPDATA%\Murmer\history.log`. Open it via tray → **Open history**.
+Full history is saved to disk. Open it via tray → **Open history**.
 
 ---
 
 ## Building from source
 
+**Windows:**
 ```bat
 git clone https://github.com/R3PC0N/murmer.git
 cd murmer
-
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-
 python main.py
 ```
 
-**Building the installer** (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
+**Linux:**
+```bash
+git clone https://github.com/R3PC0N/murmer.git
+cd murmer
+bash setup_linux.sh
+./murmer.sh
+```
+
+**Building the Windows installer** (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
 
 ```
 Open murmer.iss in Inno Setup → press F9
@@ -253,7 +285,7 @@ Output: dist\Murmer-Setup-vX.X.exe
 ## Privacy
 
 - Audio is processed locally by default and never sent anywhere
-- When using remote mode, audio is sent over an encrypted Tailscale connection to a server you control
+- When using remote mode, audio is sent over HTTP to a server you control — secure it with HTTPS (via a reverse proxy) or a VPN if used over the internet
 - AI cleanup sends transcribed text (not audio) to the Anthropic API if enabled
 
 ---

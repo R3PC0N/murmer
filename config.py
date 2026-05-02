@@ -20,6 +20,7 @@ _DEFAULTS: dict = {
     "REMOTE_WHISPER_API_KEY": "",
     "AI_CLEANUP_ENABLED": True,
     "ANTHROPIC_API_KEY": "",
+    "BEEP_ENABLED": True,
     "SHOW_OVERLAY": True,
     "AUTO_START": False,
     "WORD_CORRECTIONS": {},
