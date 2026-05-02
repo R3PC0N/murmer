@@ -390,11 +390,14 @@ class ServerManagerWindow:
                      font=ctk.CTkFont(size=12, weight="bold"),
                      text_color="#aaa").pack(anchor="w", padx=16, pady=(12, 6))
 
+        local_ip = _get_local_ip()
         tailscale_ip = _get_tailscale_ip()
-        ip_text = tailscale_ip if tailscale_ip else "Not detected"
-        ip_color = "#ffffff" if tailscale_ip else "#888"
 
-        self._info_row(info_frame, "Tailscale IP", ip_text, ip_color)
+        self._info_row(info_frame, "Local IP",
+                       local_ip if local_ip else "Not detected",
+                       "#ffffff" if local_ip else "#888")
+        if tailscale_ip:
+            self._info_row(info_frame, "Tailscale IP", tailscale_ip)
         self._info_row(info_frame, "Port", "8765")
 
         api_key = _get_api_key()
@@ -423,25 +426,31 @@ class ServerManagerWindow:
                           font=ctk.CTkFont(size=11),
                           command=self._generate_api_key).pack(side="left")
 
-        if tailscale_ip:
-            url = f"http://{tailscale_ip}:8765"
-            url_row = ctk.CTkFrame(info_frame, fg_color="transparent")
-            url_row.pack(fill="x", padx=16, pady=(4, 12))
-            ctk.CTkLabel(url_row, text="Remote URL:", font=ctk.CTkFont(size=12),
-                         text_color="#666", width=90, anchor="w").pack(side="left")
-            ctk.CTkLabel(url_row, text=url,
-                         font=ctk.CTkFont(family="Consolas", size=11),
-                         text_color="#4a9eff").pack(side="left", padx=(0, 10))
-            self._url_copy_btn = ctk.CTkButton(
-                url_row, text="Copy", width=70, height=26,
-                font=ctk.CTkFont(size=11),
-                command=lambda u=url: self._copy_url(u),
-            )
-            self._url_copy_btn.pack(side="left")
+        # Always show a local URL; add Tailscale URL if available
+        display_ip = local_ip or tailscale_ip
+        if display_ip:
+            for label, ip in ([("Local URL", local_ip)] +
+                              ([("Tailscale URL", tailscale_ip)] if tailscale_ip else [])):
+                if not ip:
+                    continue
+                url = f"http://{ip}:8765"
+                url_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+                url_row.pack(fill="x", padx=16, pady=(2, 4))
+                ctk.CTkLabel(url_row, text=f"{label}:", font=ctk.CTkFont(size=12),
+                             text_color="#666", width=90, anchor="w").pack(side="left")
+                ctk.CTkLabel(url_row, text=url,
+                             font=ctk.CTkFont(family="Consolas", size=11),
+                             text_color="#4a9eff").pack(side="left", padx=(0, 10))
+                btn = ctk.CTkButton(url_row, text="Copy", width=70, height=26,
+                                    font=ctk.CTkFont(size=11),
+                                    command=lambda u=url: self._copy_url(u))
+                btn.pack(side="left")
+            # Add bottom padding
+            ctk.CTkFrame(info_frame, fg_color="transparent", height=8).pack()
         else:
             ctk.CTkLabel(info_frame,
-                         text="Connect via your local network, Tailscale, or a reverse proxy.\n"
-                              "Enter the URL manually in Settings → Transcription.",
+                         text="No IP detected. Connect via a reverse proxy\n"
+                              "and enter the URL manually in Settings → Transcription.",
                          font=ctk.CTkFont(size=11), text_color="#888", justify="left").pack(
                 anchor="w", padx=16, pady=(4, 12))
 
