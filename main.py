@@ -241,6 +241,14 @@ def _quit():
 def _background_init(splash: SplashScreen):
     global _icon
 
+    from recorder import device_available
+    if not device_available(config.AUDIO_DEVICE):
+        dev = config.AUDIO_DEVICE or "Default"
+        logger.log(f"⚠ Audio device not detected: {dev}. Check Settings → Audio.", level="ERROR")
+    else:
+        dev = config.AUDIO_DEVICE or "Default"
+        logger.log(f"Audio device: {dev}")
+
     transcriber.load()
     _load_cleaner()
 

@@ -5,6 +5,7 @@ import keyboard
 
 import autostart
 import config
+from recorder import device_available, get_device_names
 
 
 class SettingsWindow:
@@ -24,7 +25,7 @@ class SettingsWindow:
     def _build(self):
         win = ctk.CTkToplevel(self._root)
         win.title("Murmer — Settings")
-        win.geometry("460x780")
+        win.geometry("460x860")
         win.resizable(False, False)
         win.attributes("-topmost", True)
         win.after(100, win.lift)
@@ -62,6 +63,28 @@ class SettingsWindow:
 
         self._autostart_var = ctk.BooleanVar(value=autostart.is_enabled())
         self._toggle_row(content, "Start with Windows", self._autostart_var)
+
+        # ── Audio ─────────────────────────────────────────────────
+        self._section(content, "AUDIO")
+
+        self._label(content, "Input device")
+        device_names = get_device_names()
+        current_device = config.AUDIO_DEVICE if config.AUDIO_DEVICE else "Default"
+        if current_device not in device_names:
+            device_names.append(current_device)
+        self._device_input_var = ctk.StringVar(value=current_device)
+        ctk.CTkOptionMenu(content, values=device_names,
+                          variable=self._device_input_var,
+                          width=340).pack(anchor="w", pady=(0, 6))
+
+        # Status indicator
+        available = device_available(config.AUDIO_DEVICE)
+        status_text = "✓  Device available" if available else "⚠  Device not detected"
+        status_color = "#4CAF50" if available else "#E07B39"
+        self._device_status = ctk.CTkLabel(content, text=status_text,
+                                           font=ctk.CTkFont(size=11),
+                                           text_color=status_color)
+        self._device_status.pack(anchor="w", pady=(0, 14))
 
         # ── Transcription ─────────────────────────────────────────
         self._section(content, "TRANSCRIPTION")
@@ -165,8 +188,10 @@ class SettingsWindow:
 
     def _collect_updates(self) -> dict:
         mode = self._mode_var.get()
+        selected_device = self._device_input_var.get()
         updates = {
             "PUSH_TO_TALK_KEY": self._hotkey_var.get().strip().lower() or "f9",
+            "AUDIO_DEVICE": None if selected_device == "Default" else selected_device,
             "TRANSCRIPTION_MODE": mode,
             "REMOTE_WHISPER_URL": self._remote_url_var.get().strip(),
             "REMOTE_WHISPER_API_KEY": self._remote_key_var.get().strip(),

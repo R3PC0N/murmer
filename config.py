@@ -10,6 +10,7 @@ _SETTINGS_FILE = Path(__file__).parent / "settings.json"
 
 _DEFAULTS: dict = {
     "PUSH_TO_TALK_KEY": "f9",
+    "AUDIO_DEVICE": None,
     "WHISPER_MODEL": "large-v3",
     "WHISPER_DEVICE": "cuda",
     "WHISPER_COMPUTE_TYPE": "float16",
