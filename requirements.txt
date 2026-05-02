@@ -8,3 +8,4 @@ Pillow
 anthropic
 python-dotenv
 customtkinter
+requests
