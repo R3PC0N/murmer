@@ -64,6 +64,7 @@ def _beep(frequency: int, duration_ms: int):
 # ── Single instance ───────────────────────────────────────────────────────────
 _mutex = None
 _lock_file = None
+_pynput_listener = None  # Linux only
 
 def _ensure_single_instance():
     global _mutex, _lock_file
@@ -209,20 +210,79 @@ def _process(audio):
 
 # ── Hotkey listener ───────────────────────────────────────────────────────────
 
+def _pynput_key(key_str: str):
+    """Map keyboard-lib key string to a pynput Key constant, or return the string for char keys."""
+    from pynput import keyboard as _pk
+    special = {
+        **{f'f{i}': getattr(_pk.Key, f'f{i}') for i in range(1, 13)},
+        'space': _pk.Key.space, 'enter': _pk.Key.enter, 'tab': _pk.Key.tab,
+        'backspace': _pk.Key.backspace, 'delete': _pk.Key.delete,
+        'esc': _pk.Key.esc, 'escape': _pk.Key.esc,
+        'ctrl': _pk.Key.ctrl, 'ctrl_l': _pk.Key.ctrl_l, 'ctrl_r': _pk.Key.ctrl_r,
+        'alt': _pk.Key.alt, 'alt_l': _pk.Key.alt_l, 'alt_r': _pk.Key.alt_r,
+        'shift': _pk.Key.shift, 'shift_l': _pk.Key.shift_l, 'shift_r': _pk.Key.shift_r,
+        'caps_lock': _pk.Key.caps_lock,
+        'up': _pk.Key.up, 'down': _pk.Key.down, 'left': _pk.Key.left, 'right': _pk.Key.right,
+        'home': _pk.Key.home, 'end': _pk.Key.end,
+        'page_up': _pk.Key.page_up, 'page_down': _pk.Key.page_down,
+    }
+    return special.get(key_str.lower(), key_str.lower())
+
+
+def _pynput_key_matches(key, target) -> bool:
+    from pynput import keyboard as _pk
+    if isinstance(target, _pk.Key):
+        return key == target
+    try:
+        return key.char == target
+    except AttributeError:
+        return False
+
+
 def _keyboard_listener():
+    global _pynput_listener
     _held = False
 
-    def on_key_event(event):
-        nonlocal _held
-        if event.event_type == keyboard.KEY_DOWN and not _held:
-            _held = True
-            threading.Thread(target=_on_press, daemon=True).start()
-        elif event.event_type == keyboard.KEY_UP and _held:
-            _held = False
-            threading.Thread(target=_on_release, daemon=True).start()
+    if sys.platform == "win32":
+        def on_key_event(event):
+            nonlocal _held
+            if event.event_type == keyboard.KEY_DOWN and not _held:
+                _held = True
+                threading.Thread(target=_on_press, daemon=True).start()
+            elif event.event_type == keyboard.KEY_UP and _held:
+                _held = False
+                threading.Thread(target=_on_release, daemon=True).start()
+        keyboard.hook_key(config.PUSH_TO_TALK_KEY, on_key_event, suppress=True)
+        keyboard.wait()
+    else:
+        from pynput import keyboard as _pk
+        target = _pynput_key(config.PUSH_TO_TALK_KEY)
 
-    keyboard.hook_key(config.PUSH_TO_TALK_KEY, on_key_event, suppress=True)
-    keyboard.wait()
+        def on_press(key):
+            nonlocal _held
+            if _pynput_key_matches(key, target) and not _held:
+                _held = True
+                threading.Thread(target=_on_press, daemon=True).start()
+
+        def on_release(key):
+            nonlocal _held
+            if _pynput_key_matches(key, target) and _held:
+                _held = False
+                threading.Thread(target=_on_release, daemon=True).start()
+
+        with _pk.Listener(on_press=on_press, on_release=on_release) as listener:
+            _pynput_listener = listener
+            listener.join()
+        _pynput_listener = None
+
+
+def _stop_hotkey_listener():
+    global _pynput_listener
+    if sys.platform == "win32":
+        keyboard.unhook_all()
+    else:
+        if _pynput_listener is not None:
+            _pynput_listener.stop()
 
 
 # ── Settings & restart ────────────────────────────────────────────────────────
@@ -304,7 +364,7 @@ def _open_server_manager():
 def _on_settings_saved(updates: dict):
     _load_cleaner()
     if "PUSH_TO_TALK_KEY" in updates:
-        keyboard.unhook_all()
+        _stop_hotkey_listener()
         threading.Thread(target=_keyboard_listener, daemon=True).start()
         logger.log(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
     logger.log("Settings saved.")
@@ -322,7 +382,7 @@ def _restart():
             fcntl.flock(_lock_file, fcntl.LOCK_UN)
             _lock_file.close()
             _lock_file = None
-    keyboard.unhook_all()
+    _stop_hotkey_listener()
     if _icon:
         _icon.stop()
     if _root:
@@ -337,7 +397,7 @@ def _do_restart():
 # ── Quit ──────────────────────────────────────────────────────────────────────
 
 def _quit():
-    keyboard.unhook_all()
+    _stop_hotkey_listener()
     if _server_running():
         _stop_whisper_server()
     if _icon:

@@ -411,7 +411,23 @@ class SettingsWindow:
         threading.Thread(target=self._capture_key, daemon=True).start()
 
     def _capture_key(self):
-        key = keyboard.read_key(suppress=True)
+        import sys
+        if sys.platform == "win32":
+            key = keyboard.read_key(suppress=True)
+        else:
+            from pynput import keyboard as _pk
+            captured = [None]
+
+            def on_press(k):
+                try:
+                    captured[0] = k.name if hasattr(k, 'name') else k.char
+                except AttributeError:
+                    captured[0] = str(k)
+                return False  # stop listener after first key
+
+            with _pk.Listener(on_press=on_press) as _listener:
+                _listener.join()
+            key = captured[0] or "f9"
         self._win.after(0, lambda: self._hotkey_var.set(key))
         self._win.after(0, lambda: self._capture_btn.configure(
             text="Capture key", state="normal"))
