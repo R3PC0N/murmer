@@ -75,8 +75,7 @@ def _beep(frequency: int, duration_ms: int):
 # ── Single instance ───────────────────────────────────────────────────────────
 _mutex = None
 _lock_file = None
-_pynput_listener = None   # Linux only
-_icon_ready = threading.Event()  # Linux only: signals main thread that icon is ready
+_pynput_listener = None  # Linux only
 
 def _ensure_single_instance():
     global _mutex, _lock_file
@@ -465,7 +464,14 @@ def _background_init(splash: SplashScreen):
     if sys.platform == "win32":
         _icon.run_detached()
     else:
-        _icon_ready.set()  # wake main thread to finish tray setup
+        # Push the default GLib context as thread-default so AppIndicator's
+        # DBus operations use the same context regardless of which thread runs them.
+        def _run_pystray_linux():
+            from gi.repository import GLib
+            GLib.MainContext.default().push_thread_default()
+            _icon.run()
+
+        threading.Thread(target=_run_pystray_linux, daemon=True).start()
 
     _root.after(0, splash.hide)
 
@@ -502,43 +508,6 @@ def main():
         threading.Thread(target=_background_init, args=(splash,), daemon=True).start()
 
     _root.after(100, _start)
-
-    if sys.platform != "win32":
-        # Linux: GTK/AppIndicator must run in the main thread, but so must tkinter.
-        # Solution: set up AppIndicator from the main thread once background_init
-        # signals it's ready, then pump the GLib event loop via tkinter's after().
-        def _wait_for_icon():
-            if not _icon_ready.is_set():
-                _root.after(100, _wait_for_icon)
-                return
-            if _icon is None:
-                return
-            try:
-                from gi.repository import GLib
-                _icon._setup()  # create AppIndicator in main thread
-
-                # Patch _stop so it doesn't call Gtk.main_quit() (we never called Gtk.main())
-                def _patched_stop():
-                    try:
-                        from gi.repository import AppIndicator3
-                        _icon._indicator.set_status(AppIndicator3.IndicatorStatus.PASSIVE)
-                    except Exception:
-                        pass
-                _icon._stop = _patched_stop
-
-                # Pump GLib events from tkinter's event loop
-                def _pump():
-                    ctx = GLib.MainContext.default()
-                    while ctx.pending():
-                        ctx.iteration(False)
-                    _root.after(50, _pump)
-
-                _root.after(50, _pump)
-            except Exception as e:
-                logger.log(f"Tray init error: {e}", level="ERROR")
-
-        _root.after(200, _wait_for_icon)
-
     _root.mainloop()
 
 
