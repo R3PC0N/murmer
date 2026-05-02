@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define AppName      "Murmer"
-#define AppVersion   "1.0"
+#define AppVersion   "1.1"
 #define AppPublisher "R3PC0N"
 
 [Setup]
