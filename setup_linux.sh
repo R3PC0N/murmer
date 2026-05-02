@@ -30,11 +30,15 @@ sudo apt-get update -qq
 sudo apt-get install -y \
     python3-venv \
     python3-tk \
+    python3-dev \
     xdotool \
     xclip \
     libportaudio2 \
     libappindicator3-1 \
-    gir1.2-appindicator3-0.1
+    gir1.2-appindicator3-0.1 \
+    libgirepository1.0-dev \
+    libcairo2-dev \
+    gnome-shell-extension-appindicator
 
 echo -e "${GREEN}✓ System packages installed${NC}"
 
@@ -48,8 +52,30 @@ echo -e "${GREEN}✓ venv created${NC}"
 echo ""
 echo "Installing Python packages (this may take a minute)..."
 venv/bin/pip install --upgrade pip --quiet
+venv/bin/pip install PyGObject --quiet
 venv/bin/pip install -r requirements.txt --quiet
 echo -e "${GREEN}✓ Python packages installed${NC}"
+
+# ── GNOME AppIndicator extension (tray icon) ──────────────────────────────────
+echo ""
+if command -v gnome-extensions &> /dev/null && [ -n "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    ENABLED=0
+    # Try Zorin OS extension first, fall back to upstream
+    for EXT_ID in "zorin-appindicator@zorinos.com" "appindicatorsupport@rgcjonas.gmail.com"; do
+        if gnome-extensions list 2>/dev/null | grep -q "$EXT_ID"; then
+            gnome-extensions enable "$EXT_ID" 2>/dev/null && ENABLED=1 && break
+        fi
+    done
+    if [ "$ENABLED" -eq 1 ]; then
+        echo -e "${GREEN}✓ AppIndicator extension enabled (tray icon will work)${NC}"
+    else
+        echo -e "${YELLOW}→ Could not enable AppIndicator extension automatically.${NC}"
+        echo "  Enable it manually in GNOME Extensions or the Extensions app."
+    fi
+else
+    echo -e "${YELLOW}→ AppIndicator extension check skipped (no GNOME session detected).${NC}"
+    echo "  After setup, make sure the AppIndicator extension is enabled for the tray icon."
+fi
 
 # ── .env file ─────────────────────────────────────────────────────────────────
 echo ""
