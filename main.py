@@ -1,3 +1,14 @@
+# ── X11 thread safety (must be before any tkinter or GTK import) ─────────────
+import sys as _sys
+if _sys.platform != "win32":
+    import ctypes as _ctypes
+    try:
+        _ctypes.cdll.LoadLibrary("libX11.so.6").XInitThreads()
+    except Exception:
+        pass
+    del _ctypes
+del _sys
+
 # ── Early window (shown immediately before heavy imports) ─────────────────────
 import tkinter as _tk
 
