@@ -465,7 +465,7 @@ def _background_init(splash: SplashScreen):
     if sys.platform == "win32":
         _icon.run_detached()
     else:
-        _icon_ready.set()  # hand icon to main thread to run there
+        _icon_ready.set()  # wake main thread to finish tray setup
 
     _root.after(0, splash.hide)
 
@@ -503,15 +503,43 @@ def main():
 
     _root.after(100, _start)
 
-    if sys.platform == "win32":
-        _root.mainloop()
-    else:
-        # Linux: GTK/AppIndicator must run in the main thread.
-        # Run tkinter in a background thread, pystray blocks the main thread.
-        threading.Thread(target=_root.mainloop, daemon=True).start()
-        _icon_ready.wait(timeout=120)
-        if _icon is not None:
-            _icon.run()  # blocks until quit
+    if sys.platform != "win32":
+        # Linux: GTK/AppIndicator must run in the main thread, but so must tkinter.
+        # Solution: set up AppIndicator from the main thread once background_init
+        # signals it's ready, then pump the GLib event loop via tkinter's after().
+        def _wait_for_icon():
+            if not _icon_ready.is_set():
+                _root.after(100, _wait_for_icon)
+                return
+            if _icon is None:
+                return
+            try:
+                from gi.repository import GLib
+                _icon._setup()  # create AppIndicator in main thread
+
+                # Patch _stop so it doesn't call Gtk.main_quit() (we never called Gtk.main())
+                def _patched_stop():
+                    try:
+                        from gi.repository import AppIndicator3
+                        _icon._indicator.set_status(AppIndicator3.IndicatorStatus.PASSIVE)
+                    except Exception:
+                        pass
+                _icon._stop = _patched_stop
+
+                # Pump GLib events from tkinter's event loop
+                def _pump():
+                    ctx = GLib.MainContext.default()
+                    while ctx.pending():
+                        ctx.iteration(False)
+                    _root.after(50, _pump)
+
+                _root.after(50, _pump)
+            except Exception as e:
+                logger.log(f"Tray init error: {e}", level="ERROR")
+
+        _root.after(200, _wait_for_icon)
+
+    _root.mainloop()
 
 
 if __name__ == "__main__":
