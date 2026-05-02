@@ -42,10 +42,11 @@ Source: "autostart.py";        DestDir: "{app}"; Flags: ignoreversion
 Source: "splash.py";           DestDir: "{app}"; Flags: ignoreversion
 Source: "requirements.txt";    DestDir: "{app}"; Flags: ignoreversion
 Source: ".env - Copy.example"; DestDir: "{app}"; DestName: ".env.example"; Flags: ignoreversion
+Source: "murmer.ico";          DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; Comment: "Voice dictation with AI cleanup"
-Name: "{autodesktop}\{#AppName}";  Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; Tasks: desktopicon; Comment: "Voice dictation with AI cleanup"
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmer.ico"; Comment: "Voice dictation with AI cleanup"
+Name: "{autodesktop}\{#AppName}";  Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmer.ico"; Tasks: desktopicon; Comment: "Voice dictation with AI cleanup"
 
 [Run]
 Filename: "python.exe"; Parameters: "-m venv ""{app}\venv"""; StatusMsg: "Creating virtual environment..."; Flags: runhidden waituntilterminated

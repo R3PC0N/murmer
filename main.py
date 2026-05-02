@@ -32,6 +32,8 @@ import pystray
 from PIL import Image, ImageDraw
 
 import config
+import logger
+from log_window import LogWindow
 from overlay import RecordingOverlay
 from paster import paste_text
 from recorder import Recorder
@@ -65,6 +67,7 @@ transcriber = Transcriber()
 cleaner = None
 overlay: RecordingOverlay | None = None
 settings_win: SettingsWindow | None = None
+log_win: LogWindow | None = None
 
 
 # ── Cleaner ───────────────────────────────────────────────────────────────────
@@ -75,9 +78,9 @@ def _load_cleaner():
     if config.AI_CLEANUP_ENABLED and config.ANTHROPIC_API_KEY:
         from cleaner import Cleaner
         cleaner = Cleaner()
-        print("AI cleanup enabled (Claude Haiku).")
+        logger.log("AI cleanup enabled (Claude Haiku).")
     else:
-        print("AI cleanup disabled.")
+        logger.log("AI cleanup disabled.")
 
 
 # ── Tray icon ─────────────────────────────────────────────────────────────────
@@ -85,16 +88,26 @@ def _load_cleaner():
 def _make_icon(recording=False, processing=False) -> Image.Image:
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
+
+    d.rounded_rectangle([1, 1, 62, 62], radius=14, fill="#1a1a1e")
+
     if recording:
-        bg = (210, 45, 45)
+        color = "#D94040"
     elif processing:
-        bg = (210, 165, 30)
+        color = "#D4A030"
     else:
-        bg = (45, 170, 90)
-    d.ellipse([2, 2, 62, 62], fill=bg)
-    d.rounded_rectangle([23, 10, 41, 38], radius=9, fill="white")
-    d.rectangle([30, 37, 34, 50], fill="white")
-    d.ellipse([22, 49, 42, 55], fill="white")
+        color = "#8A8A8E"
+
+    heights = [10, 18, 28, 38, 28, 18, 10]
+    bar_w, gap = 5, 3
+    total_w = len(heights) * bar_w + (len(heights) - 1) * gap
+    sx = (64 - total_w) // 2
+    cy = 32
+
+    for i, h in enumerate(heights):
+        x = sx + i * (bar_w + gap)
+        d.rounded_rectangle([x, cy - h // 2, x + bar_w - 1, cy + h // 2],
+                            radius=2, fill=color)
     return img
 
 
@@ -141,14 +154,16 @@ def _process(audio):
         text, language = transcriber.transcribe(audio)
         if not text:
             return
-        print(f"Transcribed ({language}): {text}")
+        logger.log(f"Transcribed ({language}): {text}")
         if cleaner and config.AI_CLEANUP_ENABLED:
             text = cleaner.clean(text, language)
-            print(f"Cleaned:               {text}")
+            logger.log(f"Cleaned: {text}", level="RESULT")
+        else:
+            logger.log(f"Result: {text}", level="RESULT")
         paste_text(text)
         winsound.Beep(660, 80)
     except Exception as e:
-        print(f"Error: {e}")
+        logger.log(f"Error: {e}", level="ERROR")
         winsound.Beep(300, 250)
     finally:
         _processing = False
@@ -180,13 +195,18 @@ def _open_settings():
         _root.after(0, settings_win.open)
 
 
+def _open_log():
+    if _root and log_win:
+        _root.after(0, log_win.open)
+
+
 def _on_settings_saved(updates: dict):
     _load_cleaner()
     if "PUSH_TO_TALK_KEY" in updates:
         keyboard.unhook_all()
         threading.Thread(target=_keyboard_listener, daemon=True).start()
-        print(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
-    print("Settings saved.")
+        logger.log(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
+    logger.log("Settings saved.")
 
 
 def _restart():
@@ -225,14 +245,16 @@ def _background_init(splash: SplashScreen):
     _load_cleaner()
 
     key = config.PUSH_TO_TALK_KEY.upper()
-    print(f"Ready. Hold {key} to record, release to transcribe and paste.")
+    logger.log(f"Ready. Hold {key} to record, release to transcribe and paste.")
 
     menu = pystray.Menu(
         pystray.MenuItem("Murmer", None, enabled=False),
         pystray.MenuItem(f"Hold {key} to record", None, enabled=False),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Settings", lambda icon, item: _open_settings()),
-        pystray.MenuItem("Restart",  lambda icon, item: _restart()),
+        pystray.MenuItem("Settings",      lambda icon, item: _open_settings()),
+        pystray.MenuItem("Activity log",  lambda icon, item: _open_log()),
+        pystray.MenuItem("Open history",  lambda icon, item: logger.open_history()),
+        pystray.MenuItem("Restart",       lambda icon, item: _restart()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", lambda icon, item: _quit()),
     )
@@ -247,7 +269,7 @@ def _background_init(splash: SplashScreen):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    global _root, overlay, settings_win, _early_win
+    global _root, overlay, settings_win, log_win, _early_win
 
     _ensure_single_instance()
 
@@ -261,6 +283,7 @@ def main():
 
     overlay = RecordingOverlay(_root)
     settings_win = SettingsWindow(_root, on_save=_on_settings_saved, on_restart=_restart)
+    log_win = LogWindow(_root)
 
     splash = SplashScreen(_root)
 

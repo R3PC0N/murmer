@@ -6,6 +6,7 @@ import requests
 from faster_whisper import WhisperModel
 
 import config
+import logger
 
 
 def _to_wav_bytes(audio: np.ndarray) -> bytes:
@@ -24,15 +25,15 @@ class Transcriber:
 
     def load(self):
         if config.TRANSCRIPTION_MODE == "remote":
-            print(f"Transcription mode: remote ({config.REMOTE_WHISPER_URL})")
+            logger.log(f"Transcription mode: remote ({config.REMOTE_WHISPER_URL})")
             return
-        print(f"Loading Whisper {config.WHISPER_MODEL} on {config.WHISPER_DEVICE} ({config.WHISPER_COMPUTE_TYPE})...")
+        logger.log(f"Loading Whisper {config.WHISPER_MODEL} on {config.WHISPER_DEVICE} ({config.WHISPER_COMPUTE_TYPE})...")
         self.model = WhisperModel(
             config.WHISPER_MODEL,
             device=config.WHISPER_DEVICE,
             compute_type=config.WHISPER_COMPUTE_TYPE,
         )
-        print("Whisper model ready.")
+        logger.log("Whisper model ready.")
 
     def transcribe(self, audio: np.ndarray) -> tuple[str, str]:
         if config.TRANSCRIPTION_MODE == "remote":
