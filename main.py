@@ -231,8 +231,19 @@ def _stop_whisper_server():
     global _server_proc
     if _server_proc and _server_proc.poll() is None:
         _server_proc.terminate()
-        _server_proc.wait(timeout=5)
+        try:
+            _server_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _server_proc.kill()
     _server_proc = None
+    # Kill any orphaned instances (e.g. manually started)
+    subprocess.run(
+        ["powershell", "-Command",
+         "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "
+         "'*faster_whisper_server*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
+        creationflags=subprocess.CREATE_NO_WINDOW,
+        capture_output=True,
+    )
     logger.log("Whisper Server gestopt.")
     if _icon:
         _icon.update_menu()
