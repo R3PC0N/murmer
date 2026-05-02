@@ -22,9 +22,11 @@ _early_win = _show_early_window()
 # ── Heavy imports (early window is already visible) ───────────────────────────
 import ctypes
 import os
+import subprocess
 import sys
 import threading
 import winsound
+from pathlib import Path
 
 import customtkinter as ctk
 import keyboard
@@ -61,6 +63,7 @@ _recording = False
 _processing = False
 _icon: pystray.Icon | None = None
 _root: ctk.CTk | None = None
+_server_proc: subprocess.Popen | None = None
 
 recorder = Recorder()
 transcriber = Transcriber()
@@ -190,6 +193,40 @@ def _keyboard_listener():
 
 # ── Settings & restart ────────────────────────────────────────────────────────
 
+def _server_running() -> bool:
+    return _server_proc is not None and _server_proc.poll() is None
+
+
+def _start_whisper_server():
+    global _server_proc
+    if _server_running():
+        return
+    script = Path(__file__).parent / "server" / "faster_whisper_server.py"
+    python = Path(__file__).parent / "server" / "venv" / "Scripts" / "python.exe"
+    if not python.exists() or not script.exists():
+        logger.log("Whisper Server: bestanden niet gevonden. Voer setup_windows.bat uit.", level="ERROR")
+        return
+    _server_proc = subprocess.Popen(
+        [str(python), str(script)],
+        cwd=str(script.parent),
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    logger.log("Whisper Server gestart op poort 8765.")
+    if _icon:
+        _icon.update_menu()
+
+
+def _stop_whisper_server():
+    global _server_proc
+    if _server_proc and _server_proc.poll() is None:
+        _server_proc.terminate()
+        _server_proc.wait(timeout=5)
+    _server_proc = None
+    logger.log("Whisper Server gestopt.")
+    if _icon:
+        _icon.update_menu()
+
+
 def _open_settings():
     if _root and settings_win:
         _root.after(0, settings_win.open)
@@ -230,6 +267,8 @@ def _do_restart():
 
 def _quit():
     keyboard.unhook_all()
+    if _server_running():
+        _stop_whisper_server()
     if _icon:
         _icon.stop()
     if _root:
@@ -262,6 +301,16 @@ def _background_init(splash: SplashScreen):
         pystray.MenuItem("Settings",      lambda icon, item: _open_settings()),
         pystray.MenuItem("Activity log",  lambda icon, item: _open_log()),
         pystray.MenuItem("Open history",  lambda icon, item: logger.open_history()),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem(
+            lambda item: "Stop Whisper Server" if _server_running() else "Start Whisper Server",
+            lambda icon, item: _stop_whisper_server() if _server_running() else _start_whisper_server(),
+        ),
+        pystray.MenuItem(
+            lambda item: "● Server actief" if _server_running() else "○ Server gestopt",
+            None, enabled=False,
+        ),
+        pystray.Menu.SEPARATOR,
         pystray.MenuItem("Restart",       lambda icon, item: _restart()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", lambda icon, item: _quit()),
