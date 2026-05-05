@@ -54,7 +54,7 @@ public class OverlayService extends Service implements View.OnTouchListener {
 
     public static final String INTENT_EXTRA_IS_CLOSE_WINDOW = "IsCloseWindow";
 
-    private static OverlayService instance;
+    public static OverlayService instance;
     public static boolean isRunning = false;
     private WindowManager windowManager = null;
     private FlutterView flutterView;
@@ -372,6 +372,15 @@ public class OverlayService extends Service implements View.OnTouchListener {
                 .build();
         startForeground(OverlayConstants.NOTIFICATION_ID, notification);
         instance = this;
+    }
+
+    /** Called via reflection from MurmerAccessibilityService to show/hide the overlay. */
+    public void setOverlayVisible(boolean visible) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            if (flutterView != null) {
+                flutterView.setVisibility(visible ? android.view.View.VISIBLE : android.view.View.GONE);
+            }
+        });
     }
 
     private void createNotificationChannel() {

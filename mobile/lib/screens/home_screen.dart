@@ -65,8 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
       flag: OverlayFlag.defaultFlag,
       visibility: NotificationVisibility.visibilityPublic,
       positionGravity: PositionGravity.none,
-      height: 90,
-      width: 90,
+      height: 110,
+      width: 110,
       startPosition: const OverlayPosition(0, -200),
     );
 

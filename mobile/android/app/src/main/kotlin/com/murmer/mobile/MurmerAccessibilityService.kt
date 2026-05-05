@@ -1,7 +1,10 @@
 package com.murmer.mobile
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -14,13 +17,6 @@ class MurmerAccessibilityService : AccessibilityService() {
 
         @Volatile var instance: MurmerAccessibilityService? = null
 
-        /**
-         * Called via reflection from OverlayService.
-         * Text is passed directly — Android 12+ blocks clipboard reads
-         * from background services, so we can't read it here.
-         * ACTION_PASTE still works (system injects clipboard), and
-         * ACTION_SET_TEXT uses the provided text as fallback.
-         */
         @JvmStatic
         fun pasteText(text: String): Boolean {
             val service = instance ?: run {
@@ -34,101 +30,166 @@ class MurmerAccessibilityService : AccessibilityService() {
         fun isConnected(): Boolean = instance != null
     }
 
-    /** Window ID of the last window that contained an input-focused editable node. */
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val hideRunnable = Runnable { setOverlayVisible(false) }
+
     @Volatile private var lastEditableWindowId: Int = -1
 
     override fun onServiceConnected() {
         Log.d(TAG, "onServiceConnected")
         instance = this
+
+        // Required to receive TYPE_WINDOWS_CHANGED and to use getWindows()
+        val info = serviceInfo
+        info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        serviceInfo = info
+
+        // Start hidden
+        setOverlayVisible(false)
     }
 
-    /** Track which window last had an editable input focus. */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
-            val source = event.source ?: return
-            if (source.isEditable) {
-                lastEditableWindowId = event.windowId
-                Log.d(TAG, "tracked editable focus: windowId=$lastEditableWindowId pkg=${source.packageName}")
+
+        when (event.eventType) {
+
+            // Keyboard appeared or disappeared — most reliable signal
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
+                val keyboardVisible = try {
+                    windows?.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } == true
+                } catch (e: Exception) { false }
+
+                Log.d(TAG, "windows changed — keyboard=$keyboardVisible")
+
+                mainHandler.removeCallbacks(hideRunnable)
+                if (keyboardVisible) {
+                    setOverlayVisible(true)
+                } else {
+                    // Small delay so overlay doesn't flicker when switching fields
+                    mainHandler.postDelayed(hideRunnable, 400)
+                }
             }
-            source.recycle()
+
+            // Track which window had an editable field (needed for paste)
+            AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
+                val source = event.source ?: return
+                if (source.isEditable) {
+                    lastEditableWindowId = event.windowId
+                    Log.d(TAG, "tracked editable: windowId=$lastEditableWindowId")
+                }
+                source.recycle()
+            }
         }
     }
 
+    // ── Overlay visibility ────────────────────────────────────────────────────
+
+    private fun setOverlayVisible(visible: Boolean) {
+        try {
+            val cls = Class.forName(
+                "flutter.overlay.window.flutter_overlay_window.OverlayService"
+            )
+            val svc = cls.getField("instance").get(null) ?: return
+            cls.getMethod("setOverlayVisible", Boolean::class.javaPrimitiveType)
+                .invoke(svc, visible)
+            Log.d(TAG, "overlay visible=$visible")
+        } catch (e: Exception) {
+            Log.w(TAG, "setOverlayVisible failed: $e")
+        }
+    }
+
+    // ── Paste ─────────────────────────────────────────────────────────────────
+
     private fun doPaste(text: String): Boolean {
-        Log.d(TAG, "doPaste — text='${text.take(30)}' lastEditableWindowId=$lastEditableWindowId")
+        Log.d(TAG, "doPaste — '${text.take(30)}'")
 
+        // Strategy 1: use the input-focused node (works in most standard apps)
         val focused = findFocusedNode()
-        if (focused == null) {
-            Log.w(TAG, "no focused node found")
-            return false
-        }
+        if (focused != null) {
+            Log.d(TAG, "node: ${focused.className} editable=${focused.isEditable}")
 
-        Log.d(TAG, "node: class=${focused.className} editable=${focused.isEditable} pkg=${focused.packageName}")
+            val pasteOk = focused.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+            Log.d(TAG, "ACTION_PASTE on focused: $pasteOk")
+            if (pasteOk) { focused.recycle(); return true }
 
-        // Try ACTION_PASTE first — system injects clipboard content at cursor
-        val pasteOk = focused.performAction(AccessibilityNodeInfo.ACTION_PASTE)
-        Log.d(TAG, "ACTION_PASTE: $pasteOk")
-
-        if (pasteOk) {
+            val args = Bundle()
+            args.putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text
+            )
+            val setOk = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+            Log.d(TAG, "ACTION_SET_TEXT on focused: $setOk")
             focused.recycle()
-            return true
+            if (setOk) return true
+        } else {
+            Log.w(TAG, "no focused node — falling through to tree search")
         }
 
-        // Fallback: ACTION_SET_TEXT with the text passed directly
-        val args = Bundle()
-        args.putCharSequence(
-            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-            text
-        )
-        val setOk = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-        Log.d(TAG, "ACTION_SET_TEXT: $setOk")
-        focused.recycle()
-        return setOk
+        // Strategy 2: walk the active window tree and paste into the first editable node.
+        // Handles apps (e.g. Samsung Notes) whose custom editor doesn't report input focus
+        // via standard accessibility focus queries.
+        val root = rootInActiveWindow
+        if (root != null) {
+            Log.d(TAG, "trying tree-walk paste in active window")
+            val ok = pasteIntoFirstEditable(root, text)
+            root.recycle()
+            if (ok) return true
+        }
+
+        Log.w(TAG, "all paste strategies exhausted")
+        return false
+    }
+
+    /**
+     * Depth-first search for the first editable node and attempt paste / set-text.
+     * Returns true as soon as one strategy succeeds.
+     */
+    private fun pasteIntoFirstEditable(node: AccessibilityNodeInfo, text: String): Boolean {
+        if (node.isEditable) {
+            val pasteOk = node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+            Log.d(TAG, "tree-walk ACTION_PASTE on ${node.className}: $pasteOk")
+            if (pasteOk) return true
+
+            val args = Bundle()
+            args.putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text
+            )
+            val setOk = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+            Log.d(TAG, "tree-walk ACTION_SET_TEXT on ${node.className}: $setOk")
+            if (setOk) return true
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = pasteIntoFirstEditable(child, text)
+            child.recycle()
+            if (found) return true
+        }
+        return false
     }
 
     private fun findFocusedNode(): AccessibilityNodeInfo? {
-        // 1. Try all windows
-        val allWindows: List<AccessibilityWindowInfo>? = try {
-            windows
-        } catch (e: Exception) {
-            Log.w(TAG, "getWindows() threw: $e")
-            null
-        }
-        Log.d(TAG, "windows: ${allWindows?.size ?: "null"}")
+        val allWindows = try { windows } catch (e: Exception) { null }
 
         if (!allWindows.isNullOrEmpty()) {
-            // Prefer the tracked window
             if (lastEditableWindowId >= 0) {
-                allWindows.find { it.id == lastEditableWindowId }?.let { window ->
-                    val root = window.root
+                allWindows.find { it.id == lastEditableWindowId }?.let { w ->
+                    val root = w.root
                     val node = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
                     root?.recycle()
-                    if (node != null) {
-                        Log.d(TAG, "found in tracked window $lastEditableWindowId")
-                        return node
-                    }
+                    if (node != null) return node
                 }
             }
-            // Scan all non-system windows
-            for (window in allWindows) {
-                if (window.type == AccessibilityWindowInfo.TYPE_SYSTEM) continue
-                val root = window.root ?: continue
+            for (w in allWindows) {
+                if (w.type == AccessibilityWindowInfo.TYPE_SYSTEM) continue
+                val root = w.root ?: continue
                 val node = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
                 root.recycle()
-                if (node != null) {
-                    Log.d(TAG, "found in window id=${window.id} type=${window.type}")
-                    return node
-                }
+                if (node != null) return node
             }
         }
 
-        // 2. Fallback: rootInActiveWindow
-        val root = rootInActiveWindow
-        Log.d(TAG, "rootInActiveWindow pkg=${root?.packageName}")
-        if (root == null) return null
+        val root = rootInActiveWindow ?: return null
         val node = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        Log.d(TAG, "rootInActiveWindow node: class=${node?.className} editable=${node?.isEditable}")
         root.recycle()
         return node
     }
@@ -137,6 +198,7 @@ class MurmerAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
+        mainHandler.removeCallbacks(hideRunnable)
         instance = null
         super.onDestroy()
     }

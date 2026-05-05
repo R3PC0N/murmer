@@ -26,8 +26,8 @@ const _iconProc    = Color(0xFFD4930A);
 const _iconSuccess = Color(0xFF34C759);
 const _iconError   = Color(0xFFFF3B30);
 
-const _size   = 58.0;
-const _radius = 14.0;
+const _size   = 68.0;
+const _radius = 16.0;
 
 class MicButtonOverlay extends StatefulWidget {
   const MicButtonOverlay({super.key});
