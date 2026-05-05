@@ -1,36 +1,4 @@
-# ── X11 thread safety (must be before any tkinter or GTK import) ─────────────
-import sys as _sys
-if _sys.platform != "win32":
-    import ctypes as _ctypes
-    try:
-        _ctypes.cdll.LoadLibrary("libX11.so.6").XInitThreads()
-    except Exception:
-        pass
-    del _ctypes
-del _sys
-
-# ── Early window (shown immediately before heavy imports) ─────────────────────
-import tkinter as _tk
-
-def _show_early_window():
-    win = _tk.Tk()
-    win.overrideredirect(True)
-    win.configure(bg="#1c1c1e")
-    win.attributes("-topmost", True)
-    sw = win.winfo_screenwidth()
-    sh = win.winfo_screenheight()
-    w, h = 300, 90
-    win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
-    _tk.Label(win, text="Murmur", fg="#ffffff", bg="#1c1c1e",
-              font=("Segoe UI", 24, "bold")).place(relx=0.5, rely=0.38, anchor="center")
-    _tk.Label(win, text="Starting...", fg="#666666", bg="#1c1c1e",
-              font=("Segoe UI", 11)).place(relx=0.5, rely=0.72, anchor="center")
-    win.update()
-    return win
-
-_early_win = _show_early_window()
-
-# ── Heavy imports (early window is already visible) ───────────────────────────
+# ── Heavy imports ─────────────────────────────────────────────────────────────
 import ctypes
 import os
 import re
@@ -39,9 +7,8 @@ import sys
 import threading
 from pathlib import Path
 
-import customtkinter as ctk
-import keyboard
 import pystray
+import webview
 from PIL import Image, ImageDraw
 
 import config
@@ -55,12 +22,8 @@ from settings_window import SettingsWindow
 from splash import SplashScreen
 from transcriber import Transcriber
 
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("dark-blue")
-
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
-# subprocess flag to hide console windows — only exists on Windows
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 # ── Audio feedback ────────────────────────────────────────────────────────────
@@ -83,13 +46,13 @@ def _beep(frequency: int, duration_ms: int):
 # ── Single instance ───────────────────────────────────────────────────────────
 _mutex = None
 _lock_file = None
-_pynput_listener = None  # Linux only
+_pynput_listener = None
 
 def _ensure_single_instance():
     global _mutex, _lock_file
     if sys.platform == "win32":
         _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmurSingleInstance")
-        if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        if ctypes.windll.kernel32.GetLastError() == 183:
             sys.exit(0)
     else:
         import fcntl, tempfile
@@ -102,19 +65,20 @@ def _ensure_single_instance():
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
-_recording = False
-_processing = False
+_recording   = False
+_processing  = False
 _icon: pystray.Icon | None = None
-_root: ctk.CTk | None = None
 _server_proc: subprocess.Popen | None = None
+_overlay: RecordingOverlay | None = None
 
-recorder = Recorder()
+recorder    = Recorder()
 transcriber = Transcriber()
-cleaner = None
-overlay: RecordingOverlay | None = None
+cleaner     = None
+
 settings_win: SettingsWindow | None = None
 log_win: LogWindow | None = None
 server_manager_win: ServerManagerWindow | None = None
+splash: SplashScreen | None = None
 
 
 # ── Cleaner ───────────────────────────────────────────────────────────────────
@@ -135,26 +99,22 @@ def _load_cleaner():
 def _make_icon(recording=False, processing=False) -> Image.Image:
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-
     d.rounded_rectangle([1, 1, 62, 62], radius=14, fill="#1a1a1e")
-
     if recording:
         color = "#D94040"
     elif processing:
         color = "#D4A030"
     else:
         color = "#8A8A8E"
-
     heights = [10, 18, 28, 38, 28, 18, 10]
     bar_w, gap = 5, 3
     total_w = len(heights) * bar_w + (len(heights) - 1) * gap
     sx = (64 - total_w) // 2
     cy = 32
-
     for i, h in enumerate(heights):
         x = sx + i * (bar_w + gap)
         d.rounded_rectangle([x, cy - h // 2, x + bar_w - 1, cy + h // 2],
-                            radius=2, fill=color)
+                             radius=2, fill=color)
     return img
 
 
@@ -173,8 +133,8 @@ def _on_press():
     _update_icon()
     _beep(880, 80)
     recorder.start()
-    if config.SHOW_OVERLAY and overlay:
-        overlay.show()
+    if config.SHOW_OVERLAY and _overlay:
+        _overlay.show()
 
 
 def _on_release():
@@ -183,8 +143,8 @@ def _on_release():
         return
     audio = recorder.stop()
     _recording = False
-    if overlay:
-        overlay.hide()
+    if _overlay:
+        _overlay.hide()
 
     if audio is None or len(audio) < config.MIN_RECORDING_SAMPLES:
         _update_icon()
@@ -230,7 +190,6 @@ def _process(audio):
 # ── Hotkey listener ───────────────────────────────────────────────────────────
 
 def _pynput_key(key_str: str):
-    """Map keyboard-lib key string to a pynput Key constant, or return the string for char keys."""
     from pynput import keyboard as _pk
     special = {
         **{f'f{i}': getattr(_pk.Key, f'f{i}') for i in range(1, 13)},
@@ -263,6 +222,7 @@ def _keyboard_listener():
     _held = False
 
     if sys.platform == "win32":
+        import keyboard
         def on_key_event(event):
             nonlocal _held
             if event.event_type == keyboard.KEY_DOWN and not _held:
@@ -298,13 +258,14 @@ def _keyboard_listener():
 def _stop_hotkey_listener():
     global _pynput_listener
     if sys.platform == "win32":
+        import keyboard
         keyboard.unhook_all()
     else:
         if _pynput_listener is not None:
             _pynput_listener.stop()
 
 
-# ── Settings & restart ────────────────────────────────────────────────────────
+# ── Whisper server ────────────────────────────────────────────────────────────
 
 def _server_port_in_use() -> bool:
     import socket
@@ -349,14 +310,12 @@ def _stop_whisper_server():
         except subprocess.TimeoutExpired:
             _server_proc.kill()
     _server_proc = None
-    # Kill any orphaned instances (e.g. manually started)
     if sys.platform == "win32":
         subprocess.run(
             ["powershell", "-Command",
              "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "
              "'*faster_whisper_server*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
-            creationflags=_NO_WINDOW,
-            capture_output=True,
+            creationflags=_NO_WINDOW, capture_output=True,
         )
     else:
         subprocess.run(["pkill", "-f", "faster_whisper_server"], capture_output=True)
@@ -365,19 +324,21 @@ def _stop_whisper_server():
         _icon.update_menu()
 
 
+# ── Window openers ────────────────────────────────────────────────────────────
+
 def _open_settings():
-    if _root and settings_win:
-        _root.after(0, settings_win.open)
+    if settings_win:
+        settings_win.open()
 
 
 def _open_log():
-    if _root and log_win:
-        _root.after(0, log_win.open)
+    if log_win:
+        log_win.open()
 
 
 def _open_server_manager():
-    if _root and server_manager_win:
-        _root.after(0, server_manager_win.open)
+    if server_manager_win:
+        server_manager_win.open()
 
 
 def _on_settings_saved(updates: dict):
@@ -389,7 +350,9 @@ def _on_settings_saved(updates: dict):
     logger.log("Settings saved.")
 
 
-def _restart():
+# ── Restart / Quit ────────────────────────────────────────────────────────────
+
+def _release_lock():
     global _mutex, _lock_file
     if sys.platform == "win32":
         if _mutex:
@@ -401,19 +364,20 @@ def _restart():
             fcntl.flock(_lock_file, fcntl.LOCK_UN)
             _lock_file.close()
             _lock_file = None
+
+
+def _restart():
+    _release_lock()
     _stop_hotkey_listener()
     if _icon:
         _icon.stop()
-    if _root:
-        _root.after(0, _do_restart)
-
-
-def _do_restart():
-    _root.quit()
+    for win in list(webview.windows):
+        try:
+            win.destroy()
+        except Exception:
+            pass
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
-
-# ── Quit ──────────────────────────────────────────────────────────────────────
 
 def _quit():
     _stop_hotkey_listener()
@@ -421,13 +385,36 @@ def _quit():
         _stop_whisper_server()
     if _icon:
         _icon.stop()
-    if _root:
-        _root.after(0, _root.quit)
+    for win in list(webview.windows):
+        try:
+            win.destroy()
+        except Exception:
+            pass
 
 
-# ── Startup ───────────────────────────────────────────────────────────────────
+# ── Overlay (plain tkinter in its own thread) ─────────────────────────────────
 
-def _background_init(splash: SplashScreen):
+def _start_overlay_thread():
+    global _overlay
+    import tkinter as tk
+
+    ready = threading.Event()
+
+    def _run():
+        global _overlay
+        tk_root = tk.Tk()
+        tk_root.withdraw()
+        _overlay = RecordingOverlay(tk_root)
+        ready.set()
+        tk_root.mainloop()
+
+    threading.Thread(target=_run, daemon=True).start()
+    ready.wait(timeout=3)
+
+
+# ── Background init ───────────────────────────────────────────────────────────
+
+def _background_init():
     global _icon
 
     from recorder import device_available
@@ -451,9 +438,9 @@ def _background_init(splash: SplashScreen):
         pystray.MenuItem("Murmur", None, enabled=False),
         pystray.MenuItem(f"Hold {key} to record", None, enabled=False),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Settings",      lambda icon, item: _open_settings()),
-        pystray.MenuItem("Activity log",  lambda icon, item: _open_log()),
-        pystray.MenuItem("Open history",  lambda icon, item: logger.open_history()),
+        pystray.MenuItem("Settings",         lambda icon, item: _open_settings()),
+        pystray.MenuItem("Activity log",     lambda icon, item: _open_log()),
+        pystray.MenuItem("Open history",     lambda icon, item: logger.open_history()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Whisper Server...", lambda icon, item: _open_server_manager()),
         pystray.MenuItem(
@@ -461,7 +448,7 @@ def _background_init(splash: SplashScreen):
             None, enabled=False,
         ),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Restart",       lambda icon, item: _restart()),
+        pystray.MenuItem("Restart", lambda icon, item: threading.Thread(target=_restart, daemon=True).start()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", lambda icon, item: _quit()),
     )
@@ -472,51 +459,47 @@ def _background_init(splash: SplashScreen):
     if sys.platform == "win32":
         _icon.run_detached()
     else:
-        # Push the default GLib context as thread-default so AppIndicator's
-        # DBus operations use the same context regardless of which thread runs them.
         def _run_pystray_linux():
             from gi.repository import GLib
             GLib.MainContext.default().push_thread_default()
             _icon.run()
-
         threading.Thread(target=_run_pystray_linux, daemon=True).start()
 
-    _root.after(0, splash.hide)
+    if splash:
+        splash.hide()
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    global _root, overlay, settings_win, log_win, server_manager_win, _early_win
+    global settings_win, log_win, server_manager_win, splash
+
+    if sys.platform != "win32":
+        import ctypes as _ct
+        try:
+            _ct.cdll.LoadLibrary("libX11.so.6").XInitThreads()
+        except Exception:
+            pass
 
     _ensure_single_instance()
 
-    # Destroy early window before creating CTk root
-    if _early_win:
-        _early_win.destroy()
-        _early_win = None
-
-    _root = ctk.CTk()
-    _root.withdraw()
-
-    overlay = RecordingOverlay(_root)
-    settings_win = SettingsWindow(_root, on_save=_on_settings_saved, on_restart=_restart)
-    log_win = LogWindow(_root)
+    settings_win = SettingsWindow(on_save=_on_settings_saved, on_restart=_restart)
+    log_win = LogWindow()
     server_manager_win = ServerManagerWindow(
-        _root,
         get_server_running=_server_running,
         start_server=_start_whisper_server,
         stop_server=_stop_whisper_server,
     )
 
-    splash = SplashScreen(_root)
+    splash = SplashScreen()
+    splash.create()
 
-    def _start():
-        splash.show()
-        threading.Thread(target=_background_init, args=(splash,), daemon=True).start()
+    _start_overlay_thread()
 
-    _root.after(100, _start)
-    _root.mainloop()
+    webview.start(
+        func=lambda: threading.Thread(target=_background_init, daemon=True).start(),
+        debug=False,
+    )
 
 
 if __name__ == "__main__":

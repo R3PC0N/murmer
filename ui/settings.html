@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Murmur — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-base:      #1c1c1e;
+    --bg-surface:   #232326;
+    --bg-raised:    #2a2a2d;
+    --bg-hover:     #34343a;
+    --bg-input:     #1a1a1c;
+    --border:       rgba(255,255,255,0.08);
+    --border-mid:   rgba(255,255,255,0.13);
+    --accent:       #C8922A;
+    --accent-dim:   rgba(200,146,42,0.18);
+    --accent-glow:  rgba(200,146,42,0.09);
+    --text-pri:     rgba(255,255,255,0.94);
+    --text-sec:     rgba(255,255,255,0.62);
+    --text-muted:   rgba(255,255,255,0.42);
+    --text-accent:  #E8B45A;
+    --green:        oklch(68% 0.16 155);
+    --red:          oklch(60% 0.2 25);
+    --amber:        #C8922A;
+    --radius-sm:    5px;
+    --radius-md:    7px;
+    --font:         'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --mono:         'IBM Plex Mono', 'Consolas', monospace;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg-surface);
+    font-family: var(--font);
+    color: var(--text-pri);
+    font-size: 14px;
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    height: 100vh;
+    flex-direction: column;
+  }
+
+  .main-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 168px;
+    background: var(--bg-base);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    flex-shrink: 0;
+  }
+
+  .sidebar-heading {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 4px 20px 14px;
+  }
+
+  .nav-strip { padding: 0 8px; display: flex; flex-direction: column; gap: 1px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px; font-weight: 400;
+    color: var(--text-sec);
+    border-left: 2px solid transparent;
+    transition: background 0.1s, color 0.1s;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--bg-hover); color: var(--text-pri); }
+  .nav-item.active {
+    color: var(--text-pri); font-weight: 500;
+    border-left-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  /* ── Content ── */
+  .content-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 28px 20px;
+  }
+
+  .content-scroll::-webkit-scrollbar { width: 5px; }
+  .content-scroll::-webkit-scrollbar-track { background: transparent; }
+  .content-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+
+  .page-title {
+    font-size: 21px; font-weight: 600;
+    color: var(--text-pri);
+    margin-bottom: 22px;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Panels (shown/hidden) ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Form elements ── */
+  .field-label {
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text-sec);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .field-sub {
+    font-size: 11.5px; color: var(--text-muted);
+    margin-top: 2px; line-height: 1.45;
+  }
+  .field-group { margin-bottom: 20px; }
+
+  input[type="text"], input[type="password"], select, textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-pri);
+    font-family: var(--font);
+    font-size: 13.5px;
+    padding: 8px 11px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.12s, box-shadow 0.12s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+  textarea {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 7L11 1' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+  select option { background: #2a2a2d; }
+
+  /* ── Toggle ── */
+  .toggle-track {
+    width: 36px; height: 20px; border-radius: 10px;
+    position: relative; cursor: pointer; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: background 0.15s;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-track.off { background: rgba(255,255,255,0.12); }
+  .toggle-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: white;
+    position: absolute; top: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: left 0.15s cubic-bezier(0.4,0,0.2,1);
+  }
+  .toggle-track.on .toggle-thumb  { left: 19px; }
+  .toggle-track.off .toggle-thumb { left: 3px; }
+
+  /* ── Form row (label + toggle) ── */
+  .form-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-row:last-child { border-bottom: none; }
+  .form-row-label { font-size: 13.5px; color: var(--text-pri); }
+  .form-row-desc  { font-size: 12px; color: var(--text-sec); margin-top: 2px; line-height: 1.4; }
+  .form-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 2px 16px;
+    margin-bottom: 20px;
+  }
+
+  /* ── Segmented control ── */
+  .seg-ctrl {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px; gap: 2px;
+    margin-bottom: 20px;
+  }
+  .seg-btn {
+    padding: 5px 16px; border-radius: 4px; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    transition: all 0.12s;
+  }
+  .seg-btn.active   { background: var(--accent); color: white; }
+  .seg-btn.inactive { background: transparent; color: var(--text-sec); }
+  .seg-btn.inactive:hover { color: var(--text-pri); background: var(--bg-hover); }
+
+  /* ── Key badge ── */
+  .key-badge {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-mid);
+    border-radius: 5px;
+    padding: 6px 16px;
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-accent);
+    letter-spacing: 0.05em;
+    min-width: 64px; text-align: center;
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    background: var(--accent); color: white;
+    border: none; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 13.5px; font-weight: 500;
+    padding: 9px 16px; cursor: pointer;
+    transition: opacity 0.12s, transform 0.08s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+  .btn-ghost {
+    background: var(--bg-raised); color: var(--text-sec);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 13.5px; font-weight: 500;
+    padding: 9px 16px; cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-ghost:hover { background: var(--bg-hover); color: var(--text-pri); }
+
+  .btn-danger {
+    background: oklch(60% 0.2 25 / 0.12); color: var(--red);
+    border: 1px solid oklch(60% 0.2 25 / 0.25); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    padding: 8px 14px; cursor: pointer;
+    transition: background 0.12s;
+    flex-shrink: 0;
+  }
+  .btn-danger:hover { background: oklch(60% 0.2 25 / 0.22); }
+  .btn-danger:disabled { opacity: 0.35; cursor: default; }
+
+  .btn-sm {
+    font-size: 12.5px;
+    padding: 7px 13px;
+  }
+
+  /* ── Inline hint / warning ── */
+  .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; line-height: 1.5; }
+
+  .inline-warn {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--amber); margin-top: 8px;
+  }
+
+  .status-ok  { font-size: 12px; color: var(--green); display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .status-err { font-size: 12px; color: var(--red);   display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+
+  /* ── Bottom bar ── */
+  .bottom-bar {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex; gap: 10px;
+  }
+  .bottom-bar .btn-primary,
+  .bottom-bar .btn-ghost { flex: 1; text-align: center; }
+
+  /* ── Inline row ── */
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row-stretch { display: flex; gap: 8px; align-items: center; width: 100%; }
+  .row-stretch select, .row-stretch input { flex: 1; }
+
+  /* ── Capturing state ── */
+  .capturing { color: var(--amber); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="main-area">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-heading">Settings</div>
+      <div class="nav-strip">
+        <div class="nav-item active" data-tab="general">General</div>
+        <div class="nav-item" data-tab="audio">Audio</div>
+        <div class="nav-item" data-tab="transcription">Transcription</div>
+        <div class="nav-item" data-tab="ai">AI Cleanup</div>
+        <div class="nav-item" data-tab="display">Display</div>
+        <div class="nav-item" data-tab="profile">Profile</div>
+      </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="content-wrap">
+      <div class="content-scroll">
+
+        <!-- General -->
+        <div class="panel active" id="panel-general">
+          <div class="page-title">General</div>
+
+          <div class="field-group">
+            <div class="field-label">Push-to-talk key</div>
+            <div class="row" style="margin-top:4px">
+              <div class="key-badge" id="hotkey-badge">F9</div>
+              <button class="btn-primary btn-sm" id="capture-btn" onclick="startCapture()">Capture key</button>
+            </div>
+            <div class="hint">Hold this key anywhere to record. Release to transcribe and paste.</div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-row">
+              <div>
+                <div class="form-row-label">Start with System</div>
+                <div class="form-row-desc">Launch Murmur automatically at login</div>
+              </div>
+              <div class="toggle-track off" id="toggle-autostart" onclick="toggleSwitch(this, 'AUTO_START')">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio -->
+        <div class="panel" id="panel-audio">
+          <div class="page-title">Audio</div>
+
+          <div class="field-group">
+            <div class="field-label">Input device</div>
+            <select id="audio-device" style="max-width:360px"></select>
+            <div id="device-status" class="status-ok" style="display:none">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M4 6l1.5 1.5L8 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Device available
+            </div>
+          </div>
+        </div>
+
+        <!-- Transcription -->
+        <div class="panel" id="panel-transcription">
+          <div class="page-title">Transcription</div>
+
+          <div class="field-group">
+            <div class="field-label">Mode</div>
+            <div class="seg-ctrl">
+              <button class="seg-btn active" onclick="setMode('local')">Local</button>
+              <button class="seg-btn inactive" onclick="setMode('remote')">Remote</button>
+            </div>
+          </div>
+
+          <!-- Local -->
+          <div id="local-panel">
+            <div class="field-group">
+              <div class="field-label">Model</div>
+              <select id="whisper-model" style="max-width:220px">
+                <option value="tiny">tiny</option>
+                <option value="base">base</option>
+                <option value="small">small</option>
+                <option value="medium">medium</option>
+                <option value="large-v3">large-v3</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Device</div>
+              <select id="whisper-device" style="max-width:220px">
+                <option value="cuda">cuda</option>
+                <option value="cpu">cpu</option>
+                <option value="auto">auto</option>
+              </select>
+            </div>
+            <div class="inline-warn">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M6.5 1.5L12 11.5H1L6.5 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                <line x1="6.5" y1="5.5" x2="6.5" y2="8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="6.5" cy="10" r="0.6" fill="currentColor"/>
+              </svg>
+              Model and device changes require a restart.
+            </div>
+          </div>
+
+          <!-- Remote -->
+          <div id="remote-panel" style="display:none">
+            <div class="field-group">
+              <div class="field-label">Saved servers</div>
+              <div class="row-stretch">
+                <select id="saved-servers" onchange="onServerSelected()"></select>
+                <button class="btn-danger btn-sm" id="delete-server-btn" onclick="deleteServer()" disabled>Delete</button>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Server URL</div>
+              <input type="text" id="remote-url" placeholder="http://192.168.1.x:8765 or https://yourserver.com">
+            </div>
+            <div class="field-group">
+              <div class="field-label">API key</div>
+              <input type="password" id="remote-key" placeholder="Enter API key">
+            </div>
+            <button class="btn-ghost btn-sm" onclick="saveServerAs()">Save current as…</button>
+          </div>
+        </div>
+
+        <!-- AI Cleanup -->
+        <div class="panel" id="panel-ai">
+          <div class="page-title">AI Cleanup</div>
+
+          <div class="form-card" style="margin-bottom:20px">
+            <div class="form-row">
+              <div>
+                <div class="form-row-label">Enable AI cleanup</div>
+                <div class="form-row-desc">Uses Claude Haiku to refine transcriptions</div>
+              </div>
+              <div class="toggle-track off" id="toggle-ai" onclick="toggleSwitch(this, 'AI_CLEANUP_ENABLED')">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Anthropic API key</div>
+            <input type="password" id="api-key" placeholder="sk-ant-...">
+          </div>
+        </div>
+
+        <!-- Display -->
+        <div class="panel" id="panel-display">
+          <div class="page-title">Display</div>
+          <div class="form-card">
+            <div class="form-row">
+              <div>
+                <div class="form-row-label">Show recording overlay</div>
+                <div class="form-row-desc">A small indicator while recording</div>
+              </div>
+              <div class="toggle-track off" id="toggle-overlay" onclick="toggleSwitch(this, 'SHOW_OVERLAY')">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <div class="form-row-label">Sound feedback</div>
+                <div class="form-row-desc">Beep on record start and finish</div>
+              </div>
+              <div class="toggle-track off" id="toggle-beep" onclick="toggleSwitch(this, 'BEEP_ENABLED')">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile -->
+        <div class="panel" id="panel-profile">
+          <div class="page-title">Profile</div>
+
+          <div class="field-group">
+            <div class="field-label">Transcription style</div>
+            <select id="style-select" style="max-width:220px" onchange="onStyleChange()">
+              <option value="none">none</option>
+              <option value="formal">formal</option>
+              <option value="informal">informal</option>
+              <option value="technical">technical</option>
+              <option value="custom">custom</option>
+            </select>
+          </div>
+
+          <div class="field-group" id="custom-style-group" style="display:none">
+            <div class="field-label">Custom style instructions</div>
+            <textarea id="custom-style" rows="3" placeholder="Describe how transcriptions should be formatted…"></textarea>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">About you</div>
+            <div class="field-sub">Haiku uses this as additional context when cleaning up transcriptions</div>
+            <textarea id="user-profile" rows="5" style="margin-top:6px" placeholder='e.g. "I am a developer. I often say PR, repo, deploy."'></textarea>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Word corrections</div>
+            <div class="field-sub">One correction per line: wrong=Right — also applied without AI cleanup</div>
+            <textarea id="corrections" rows="6" style="margin-top:6px"></textarea>
+          </div>
+        </div>
+
+      </div><!-- /content-scroll -->
+
+      <!-- Bottom bar -->
+      <div class="bottom-bar">
+        <button class="btn-primary" onclick="save(false)">Save changes</button>
+        <button class="btn-ghost" onclick="save(true)">Save &amp; Restart</button>
+      </div>
+    </div><!-- /content-wrap -->
+  </div><!-- /main-area -->
+</div><!-- /layout -->
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let cfg = {};
+  let capturing = false;
+  let captureListener = null;
+  const toggleValues = {};
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('panel-' + item.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Toggle ─────────────────────────────────────────────────────────────────
+  function toggleSwitch(el, key) {
+    const isOn = el.classList.contains('on');
+    el.classList.toggle('on', !isOn);
+    el.classList.toggle('off', isOn);
+    toggleValues[key] = !isOn;
+  }
+
+  function setToggle(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('on', !!value);
+    el.classList.toggle('off', !value);
+  }
+
+  // ── Mode (local/remote) ────────────────────────────────────────────────────
+  function setMode(mode) {
+    document.querySelectorAll('#panel-transcription .seg-btn').forEach((btn, i) => {
+      const m = i === 0 ? 'local' : 'remote';
+      btn.classList.toggle('active', m === mode);
+      btn.classList.toggle('inactive', m !== mode);
+    });
+    document.getElementById('local-panel').style.display  = mode === 'local'  ? '' : 'none';
+    document.getElementById('remote-panel').style.display = mode === 'remote' ? '' : 'none';
+    cfg.TRANSCRIPTION_MODE = mode;
+  }
+
+  // ── Style ──────────────────────────────────────────────────────────────────
+  function onStyleChange() {
+    const v = document.getElementById('style-select').value;
+    document.getElementById('custom-style-group').style.display = v === 'custom' ? '' : 'none';
+  }
+
+  // ── Saved servers ──────────────────────────────────────────────────────────
+  function populateServers(servers) {
+    const sel = document.getElementById('saved-servers');
+    sel.innerHTML = '<option value="">— select a saved server —</option>';
+    (servers || []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.name; opt.textContent = s.name;
+      sel.appendChild(opt);
+    });
+    refreshDeleteBtn();
+  }
+
+  function onServerSelected() {
+    const name = document.getElementById('saved-servers').value;
+    const server = (cfg.SAVED_SERVERS || []).find(s => s.name === name);
+    if (server) {
+      document.getElementById('remote-url').value = server.url || '';
+      document.getElementById('remote-key').value = server.api_key || '';
+    }
+    refreshDeleteBtn();
+  }
+
+  function refreshDeleteBtn() {
+    const name = document.getElementById('saved-servers').value;
+    document.getElementById('delete-server-btn').disabled = !name;
+  }
+
+  async function saveServerAs() {
+    const url = document.getElementById('remote-url').value.trim();
+    if (!url) return;
+    const name = prompt('Enter a name for this server:');
+    if (!name || !name.trim()) return;
+    const key = document.getElementById('remote-key').value.trim();
+    const result = await window.pywebview.api.save_server(name.trim(), url, key);
+    cfg.SAVED_SERVERS = result;
+    populateServers(result);
+    document.getElementById('saved-servers').value = name.trim();
+    refreshDeleteBtn();
+  }
+
+  async function deleteServer() {
+    const name = document.getElementById('saved-servers').value;
+    if (!name) return;
+    const result = await window.pywebview.api.delete_server(name);
+    cfg.SAVED_SERVERS = result;
+    populateServers(result);
+  }
+
+  // ── Hotkey capture ─────────────────────────────────────────────────────────
+  async function startCapture() {
+    if (capturing) return;
+    capturing = true;
+    const btn = document.getElementById('capture-btn');
+    const badge = document.getElementById('hotkey-badge');
+    btn.textContent = 'Press a key…';
+    btn.disabled = true;
+    badge.textContent = '…';
+    badge.classList.add('capturing');
+
+    const key = await window.pywebview.api.capture_hotkey();
+    capturing = false;
+    btn.textContent = 'Capture key';
+    btn.disabled = false;
+    badge.classList.remove('capturing');
+    if (key) {
+      badge.textContent = key.toUpperCase();
+      cfg.PUSH_TO_TALK_KEY = key;
+    } else {
+      badge.textContent = (cfg.PUSH_TO_TALK_KEY || 'f9').toUpperCase();
+    }
+  }
+
+  // ── Load config ────────────────────────────────────────────────────────────
+  async function loadConfig() {
+    cfg = await window.pywebview.api.get_config();
+
+    // General
+    document.getElementById('hotkey-badge').textContent = (cfg.PUSH_TO_TALK_KEY || 'f9').toUpperCase();
+    setToggle('toggle-autostart', cfg.AUTO_START);
+    toggleValues['AUTO_START'] = !!cfg.AUTO_START;
+
+    // Audio
+    const devices = await window.pywebview.api.get_devices();
+    const devSel = document.getElementById('audio-device');
+    devSel.innerHTML = '<option value="">Default</option>';
+    devices.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      devSel.appendChild(opt);
+    });
+    if (cfg.AUDIO_DEVICE) devSel.value = cfg.AUDIO_DEVICE;
+
+    const devStatus = document.getElementById('device-status');
+    devStatus.style.display = '';
+    devStatus.className = cfg._device_ok ? 'status-ok' : 'status-err';
+    devStatus.querySelector('svg').style.display = cfg._device_ok ? '' : 'none';
+    devStatus.childNodes[devStatus.childNodes.length - 1].textContent =
+      cfg._device_ok ? ' Device available' : ' Device not detected';
+
+    // Transcription
+    setMode(cfg.TRANSCRIPTION_MODE || 'local');
+    setSelectVal('whisper-model', cfg.WHISPER_MODEL);
+    setSelectVal('whisper-device', cfg.WHISPER_DEVICE);
+    document.getElementById('remote-url').value = cfg.REMOTE_WHISPER_URL || '';
+    document.getElementById('remote-key').value = cfg.REMOTE_WHISPER_API_KEY || '';
+    populateServers(cfg.SAVED_SERVERS);
+
+    // AI Cleanup
+    setToggle('toggle-ai', cfg.AI_CLEANUP_ENABLED);
+    toggleValues['AI_CLEANUP_ENABLED'] = !!cfg.AI_CLEANUP_ENABLED;
+    document.getElementById('api-key').value = cfg.ANTHROPIC_API_KEY || '';
+
+    // Display
+    setToggle('toggle-overlay', cfg.SHOW_OVERLAY);
+    toggleValues['SHOW_OVERLAY'] = !!cfg.SHOW_OVERLAY;
+    setToggle('toggle-beep', cfg.BEEP_ENABLED);
+    toggleValues['BEEP_ENABLED'] = !!cfg.BEEP_ENABLED;
+
+    // Profile
+    setSelectVal('style-select', cfg.TRANSCRIPTION_STYLE || 'none');
+    onStyleChange();
+    document.getElementById('custom-style').value = cfg.CUSTOM_STYLE_PROMPT || '';
+    document.getElementById('user-profile').value = cfg.USER_PROFILE || '';
+    document.getElementById('corrections').value = correctionsToText(cfg.WORD_CORRECTIONS || {});
+  }
+
+  function setSelectVal(id, val) {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  }
+
+  function correctionsToText(obj) {
+    return Object.entries(obj).map(([k, v]) => `${k}=${v}`).join('\n');
+  }
+
+  function parseCorrections(text) {
+    const result = {};
+    text.trim().split('\n').forEach(line => {
+      const idx = line.indexOf('=');
+      if (idx > 0) {
+        const k = line.slice(0, idx).trim();
+        const v = line.slice(idx + 1).trim();
+        if (k && v) result[k] = v;
+      }
+    });
+    return result;
+  }
+
+  // ── Save ───────────────────────────────────────────────────────────────────
+  async function save(restart) {
+    const mode = cfg.TRANSCRIPTION_MODE || 'local';
+    const style = document.getElementById('style-select').value;
+    const devSel = document.getElementById('audio-device');
+
+    const updates = {
+      PUSH_TO_TALK_KEY:       cfg.PUSH_TO_TALK_KEY || 'f9',
+      AUDIO_DEVICE:           devSel.value || null,
+      TRANSCRIPTION_MODE:     mode,
+      REMOTE_WHISPER_URL:     document.getElementById('remote-url').value.trim(),
+      REMOTE_WHISPER_API_KEY: document.getElementById('remote-key').value.trim(),
+      AI_CLEANUP_ENABLED:     'AI_CLEANUP_ENABLED' in toggleValues ? toggleValues['AI_CLEANUP_ENABLED'] : !!cfg.AI_CLEANUP_ENABLED,
+      ANTHROPIC_API_KEY:      document.getElementById('api-key').value.trim(),
+      BEEP_ENABLED:           'BEEP_ENABLED' in toggleValues ? toggleValues['BEEP_ENABLED'] : !!cfg.BEEP_ENABLED,
+      SHOW_OVERLAY:           'SHOW_OVERLAY' in toggleValues ? toggleValues['SHOW_OVERLAY'] : !!cfg.SHOW_OVERLAY,
+      AUTO_START:             'AUTO_START' in toggleValues ? toggleValues['AUTO_START'] : !!cfg.AUTO_START,
+      TRANSCRIPTION_STYLE:    style,
+      CUSTOM_STYLE_PROMPT:    document.getElementById('custom-style').value.trim(),
+      USER_PROFILE:           document.getElementById('user-profile').value.trim(),
+      WORD_CORRECTIONS:       parseCorrections(document.getElementById('corrections').value),
+    };
+
+    if (mode === 'local') {
+      updates.WHISPER_MODEL  = document.getElementById('whisper-model').value;
+      updates.WHISPER_DEVICE = document.getElementById('whisper-device').value;
+      updates.WHISPER_COMPUTE_TYPE = updates.WHISPER_DEVICE === 'cuda' ? 'float16' : 'int8';
+    }
+
+    await window.pywebview.api.save_settings(updates, restart);
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  window.addEventListener('pywebviewready', loadConfig);
+  if (window.pywebview) loadConfig();
+</script>
+</body>
+</html>

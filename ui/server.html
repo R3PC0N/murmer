@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Murmur — Server</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-base:    #1c1c1e;
+    --bg-surface: #232326;
+    --bg-raised:  #2a2a2d;
+    --bg-hover:   #34343a;
+    --bg-input:   #1a1a1c;
+    --border:     rgba(255,255,255,0.08);
+    --border-mid: rgba(255,255,255,0.13);
+    --accent:     #C8922A;
+    --accent-dim: rgba(200,146,42,0.18);
+    --text-pri:   rgba(255,255,255,0.94);
+    --text-sec:   rgba(255,255,255,0.62);
+    --text-muted: rgba(255,255,255,0.42);
+    --text-accent:#E8B45A;
+    --green:      oklch(68% 0.16 155);
+    --red:        oklch(60% 0.2 25);
+    --amber:      #C8922A;
+    --radius-sm:  5px;
+    --radius-md:  7px;
+    --font:       'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --mono:       'IBM Plex Mono', 'Consolas', monospace;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg-surface);
+    font-family: var(--font);
+    color: var(--text-pri);
+  }
+
+  body { overflow-y: auto; }
+  body::-webkit-scrollbar { width: 5px; }
+  body::-webkit-scrollbar-track { background: transparent; }
+  body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+
+  .page { padding: 28px 24px 24px; max-width: 480px; margin: 0 auto; }
+
+  /* ── View management ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── Header ── */
+  .srv-header { text-align: center; margin-bottom: 24px; }
+  .srv-title {
+    font-size: 22px; font-weight: 700;
+    color: var(--text-pri); letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .status-row {
+    display: flex; align-items: center;
+    justify-content: center; gap: 7px;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .status-dot.running { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-dot.stopped { background: var(--text-muted); }
+  .status-text { font-size: 13px; font-weight: 500; }
+  .status-text.running { color: var(--green); }
+  .status-text.stopped { color: var(--text-sec); }
+
+  /* ── Big server button ── */
+  .server-btn-wrap { display: flex; justify-content: center; margin-bottom: 24px; }
+  .server-btn {
+    min-width: 160px; padding: 11px 28px;
+    border-radius: var(--radius-md); border: none;
+    font-family: var(--font); font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.01em;
+    transition: all 0.15s;
+  }
+  .server-btn.start {
+    background: var(--accent); color: white;
+  }
+  .server-btn.start:hover { opacity: 0.88; transform: translateY(-1px); }
+  .server-btn.stop {
+    background: oklch(60% 0.2 25 / 0.15); color: var(--red);
+    border: 1px solid oklch(60% 0.2 25 / 0.3);
+  }
+  .server-btn.stop:hover { background: oklch(60% 0.2 25 / 0.25); }
+
+  /* ── Info card ── */
+  .info-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4px 16px;
+    margin-bottom: 16px;
+  }
+  .card-heading {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 12px 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .info-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-key {
+    font-size: 12px; color: var(--text-sec); font-weight: 500;
+    width: 90px; flex-shrink: 0; letter-spacing: 0.01em;
+  }
+  .info-val {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-pri);
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .info-val.link { color: var(--text-accent); cursor: pointer; text-decoration: none; }
+  .info-val.link:hover { text-decoration: underline; }
+  .info-val.warn { color: var(--amber); }
+  .info-val.missing { color: var(--text-muted); font-style: italic; }
+
+  .api-key-row { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .api-key-val {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-accent);
+    flex: 1; min-width: 0;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+
+  /* ── Copy button ── */
+  .copy-btn {
+    padding: 4px 10px; border-radius: 4px;
+    border: 1px solid var(--border-mid);
+    background: var(--bg-raised); color: var(--text-sec);
+    font-family: var(--font); font-size: 11.5px; font-weight: 500;
+    cursor: pointer; transition: all 0.12s; flex-shrink: 0;
+  }
+  .copy-btn:hover { background: var(--bg-hover); color: var(--text-pri); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  /* ── Toggle row ── */
+  .toggle-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0 16px;
+    margin-bottom: 12px;
+  }
+  .toggle-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+  }
+  .toggle-label { font-size: 13px; color: var(--text-pri); }
+
+  .toggle-track {
+    width: 36px; height: 20px; border-radius: 10px;
+    position: relative; cursor: pointer; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: background 0.15s;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-track.off { background: rgba(255,255,255,0.12); }
+  .toggle-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: white;
+    position: absolute; top: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: left 0.15s cubic-bezier(0.4,0,0.2,1);
+  }
+  .toggle-track.on .toggle-thumb  { left: 19px; }
+  .toggle-track.off .toggle-thumb { left: 3px; }
+
+  /* ── Hint ── */
+  .hint {
+    font-size: 11.5px; color: var(--text-muted);
+    line-height: 1.6; text-align: center; margin-top: 8px;
+  }
+
+  /* ── Not installed / Linux instructions ── */
+  .not-installed-title {
+    font-size: 22px; font-weight: 700; text-align: center;
+    color: var(--text-pri); letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .not-installed-sub {
+    font-size: 13px; color: var(--text-sec);
+    text-align: center; margin-bottom: 24px;
+  }
+  .install-info {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    font-size: 13px; color: var(--text-sec);
+    line-height: 1.7; margin-bottom: 24px;
+  }
+  .install-info p { margin-bottom: 10px; }
+  .install-info p:last-child { margin-bottom: 0; }
+
+  .install-btn-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+  .btn-primary {
+    background: var(--accent); color: white;
+    border: none; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 14px; font-weight: 500;
+    padding: 11px 28px; cursor: pointer;
+    transition: opacity 0.12s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.45; cursor: default; }
+
+  .btn-generate {
+    background: var(--bg-raised); color: var(--text-sec);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 11.5px; font-weight: 500;
+    padding: 4px 10px; cursor: pointer;
+    transition: background 0.12s, color 0.12s; flex-shrink: 0;
+  }
+  .btn-generate:hover { background: var(--bg-hover); color: var(--text-pri); }
+
+  .install-note { font-size: 11.5px; color: var(--text-muted); }
+
+  /* ── Installing progress ── */
+  .installing-title {
+    font-size: 18px; font-weight: 700; text-align: center;
+    color: var(--text-pri); margin-bottom: 10px;
+  }
+  .installing-status {
+    font-size: 12.5px; color: var(--text-sec);
+    text-align: center; margin-bottom: 20px; line-height: 1.5;
+  }
+  .progress-track {
+    width: 100%; height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px; overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%; width: 40%;
+    background: var(--accent); border-radius: 99px;
+    animation: slide 1.4s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0%   { transform: translateX(-100%); }
+    50%  { transform: translateX(150%); }
+    100% { transform: translateX(350%); }
+  }
+
+  /* ── Linux code blocks ── */
+  .step-title {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-sec); margin: 16px 0 6px;
+  }
+  .code-block {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-sec); line-height: 1.6;
+    white-space: pre; overflow-x: auto;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── View: Installed (Windows & Linux) ── -->
+  <div class="view active" id="view-installed">
+    <div class="srv-header">
+      <div class="srv-title">Whisper Server</div>
+      <div class="status-row">
+        <div class="status-dot stopped" id="status-dot"></div>
+        <span class="status-text stopped" id="status-text">Stopped</span>
+      </div>
+    </div>
+
+    <div class="server-btn-wrap">
+      <button class="server-btn start" id="toggle-btn" onclick="toggleServer()">Start Server</button>
+    </div>
+
+    <div class="info-card">
+      <div class="card-heading">Connection details</div>
+
+      <div class="info-row" id="row-local-ip">
+        <span class="info-key">Local IP</span>
+        <span class="info-val" id="val-local-ip">—</span>
+      </div>
+      <div class="info-row" id="row-tailscale-ip" style="display:none">
+        <span class="info-key">Tailscale IP</span>
+        <span class="info-val" id="val-tailscale-ip">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Port</span>
+        <span class="info-val">8765</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">API key</span>
+        <div class="api-key-row" id="api-key-row">
+          <span class="api-key-val" id="val-api-key">—</span>
+          <button class="copy-btn" id="copy-key-btn" onclick="copyText('key')">Copy</button>
+          <button class="btn-generate" id="generate-btn" onclick="generateKey()" style="display:none">Generate</button>
+        </div>
+      </div>
+      <div class="info-row" id="row-local-url">
+        <span class="info-key">Local URL</span>
+        <div class="api-key-row">
+          <span class="info-val link api-key-val" id="val-local-url">—</span>
+          <button class="copy-btn" id="copy-local-btn" onclick="copyText('local')">Copy</button>
+        </div>
+      </div>
+      <div class="info-row" id="row-tailscale-url" style="display:none">
+        <span class="info-key">Tailscale URL</span>
+        <div class="api-key-row">
+          <span class="info-val link api-key-val" id="val-tailscale-url">—</span>
+          <button class="copy-btn" id="copy-tail-btn" onclick="copyText('tail')">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-card">
+      <div class="toggle-row">
+        <span class="toggle-label">Start server when Murmur launches</span>
+        <div class="toggle-track off" id="toggle-autostart" onclick="toggleAutostart(this)">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint">
+      On your other device: open Murmur → Settings → Transcription,<br>
+      set Mode to Remote and enter the URL and API key above.
+    </p>
+  </div>
+
+  <!-- ── View: Not installed (Windows) ── -->
+  <div class="view" id="view-not-installed">
+    <div class="not-installed-title">Whisper Server</div>
+    <div class="not-installed-sub">Turn this PC into a transcription server</div>
+
+    <div class="install-info">
+      <p>The Whisper Server lets other devices — like your laptop — use this PC's GPU for fast voice transcription.</p>
+      <p>How it works:</p>
+      <p style="padding-left:12px">
+        1. Install the server on this PC (one time)<br>
+        2. Make this PC reachable from your other device<br>
+        &nbsp;&nbsp;&nbsp;(local network, Tailscale, or a reverse proxy)<br>
+        3. In Settings → Transcription, set Mode to Remote<br>
+        &nbsp;&nbsp;&nbsp;and enter this PC's URL + the API key
+      </p>
+      <p>The server runs silently in the background and can be started or stopped from this menu.</p>
+    </div>
+
+    <div class="install-btn-wrap">
+      <button class="btn-primary" onclick="startInstall()">Install Server</button>
+      <span class="install-note">This will download ~500 MB of dependencies.</span>
+    </div>
+  </div>
+
+  <!-- ── View: Installing ── -->
+  <div class="view" id="view-installing">
+    <div style="padding-top: 40px;">
+      <div class="installing-title">Installing Whisper Server</div>
+      <div class="installing-status" id="install-status">Creating virtual environment…</div>
+      <div class="progress-track"><div class="progress-fill"></div></div>
+      <p style="font-size:11.5px; color: var(--text-muted); text-align:center; margin-top:6px">
+        This may take a few minutes. Please wait.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── View: Linux instructions (not installed) ── -->
+  <div class="view" id="view-linux-setup">
+    <div class="not-installed-title">Whisper Server</div>
+    <div class="not-installed-sub">Turn this PC into a transcription server</div>
+
+    <div class="step-title">1. Set up the server</div>
+    <div class="code-block">cd server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+nano .env   # set MURMUR_API_KEY</div>
+
+    <div class="step-title">2. Start manually</div>
+    <div class="code-block">python faster_whisper_server.py</div>
+
+    <div class="step-title">3. Or run as a systemd service</div>
+    <div class="code-block">sudo cp murmur-whisper.service /etc/systemd/system/
+sudo systemctl enable --now murmur-whisper</div>
+
+    <p style="font-size:11.5px; color: var(--text-muted); margin-top: 16px; line-height:1.6">
+      Once running, configure Settings → Transcription → Mode: Remote.
+    </p>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  let info = {};
+  let serverRunning = false;
+
+  // ── Show a view ────────────────────────────────────────────────────────────
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Status ─────────────────────────────────────────────────────────────────
+  function setRunning(running) {
+    serverRunning = running;
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn  = document.getElementById('toggle-btn');
+
+    dot.className  = 'status-dot ' + (running ? 'running' : 'stopped');
+    text.className = 'status-text ' + (running ? 'running' : 'stopped');
+    text.textContent = running ? 'Running' : 'Stopped';
+    btn.className  = 'server-btn ' + (running ? 'stop' : 'start');
+    btn.textContent = running ? 'Stop Server' : 'Start Server';
+  }
+
+  // ── Toggle server ──────────────────────────────────────────────────────────
+  async function toggleServer() {
+    if (!window.pywebview) return;
+    const btn = document.getElementById('toggle-btn');
+    btn.disabled = true;
+    if (serverRunning) {
+      await window.pywebview.api.stop_server();
+    } else {
+      await window.pywebview.api.start_server();
+    }
+    const running = await window.pywebview.api.is_running();
+    setRunning(running);
+    btn.disabled = false;
+  }
+
+  // ── Populate connection info ───────────────────────────────────────────────
+  function populateInfo(data) {
+    info = data;
+
+    // Local IP
+    const localIp = data.local_ip;
+    document.getElementById('val-local-ip').textContent = localIp || 'Not detected';
+    if (!localIp) document.getElementById('val-local-ip').className = 'info-val missing';
+
+    // Tailscale IP
+    const tailIp = data.tailscale_ip;
+    if (tailIp) {
+      document.getElementById('row-tailscale-ip').style.display = '';
+      document.getElementById('val-tailscale-ip').textContent = tailIp;
+    }
+
+    // API key
+    const apiKey = data.api_key;
+    if (apiKey) {
+      const masked = apiKey.slice(0, 6) + '•'.repeat(Math.min(apiKey.length - 6, 12));
+      document.getElementById('val-api-key').textContent = masked;
+      document.getElementById('copy-key-btn').style.display = '';
+      document.getElementById('generate-btn').style.display = 'none';
+    } else {
+      document.getElementById('val-api-key').textContent = 'Not set';
+      document.getElementById('val-api-key').className = 'api-key-val warn';
+      document.getElementById('copy-key-btn').style.display = 'none';
+      document.getElementById('generate-btn').style.display = '';
+    }
+
+    // URLs
+    const port = '8765';
+    if (localIp) {
+      const localUrl = `http://${localIp}:${port}`;
+      document.getElementById('val-local-url').textContent = localUrl;
+      document.getElementById('row-local-url').style.display = '';
+    }
+    if (tailIp) {
+      const tailUrl = `http://${tailIp}:${port}`;
+      document.getElementById('val-tailscale-url').textContent = tailUrl;
+      document.getElementById('row-tailscale-url').style.display = '';
+    }
+
+    // Autostart
+    const tog = document.getElementById('toggle-autostart');
+    const on  = !!data.autostart;
+    tog.classList.toggle('on', on);
+    tog.classList.toggle('off', !on);
+  }
+
+  // ── Copy ───────────────────────────────────────────────────────────────────
+  function copyText(which) {
+    let text = '';
+    let btnId = '';
+    if (which === 'key') {
+      text = info.api_key || ''; btnId = 'copy-key-btn';
+    } else if (which === 'local') {
+      text = document.getElementById('val-local-url').textContent; btnId = 'copy-local-btn';
+    } else if (which === 'tail') {
+      text = document.getElementById('val-tailscale-url').textContent; btnId = 'copy-tail-btn';
+    }
+    if (!text) return;
+    navigator.clipboard.writeText(text).catch(() => {
+      if (window.pywebview) window.pywebview.api.copy_to_clipboard(text);
+    });
+    const btn = document.getElementById(btnId);
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  }
+
+  // ── Generate API key ───────────────────────────────────────────────────────
+  async function generateKey() {
+    if (!window.pywebview) return;
+    const newInfo = await window.pywebview.api.generate_key();
+    populateInfo(newInfo);
+  }
+
+  // ── Autostart ──────────────────────────────────────────────────────────────
+  async function toggleAutostart(el) {
+    const isOn = el.classList.contains('on');
+    el.classList.toggle('on', !isOn);
+    el.classList.toggle('off', isOn);
+    if (window.pywebview) await window.pywebview.api.set_autostart(!isOn);
+  }
+
+  // ── Install ────────────────────────────────────────────────────────────────
+  async function startInstall() {
+    showView('view-installing');
+    if (!window.pywebview) return;
+    await window.pywebview.api.install_server();
+    // After install, reload
+    await load();
+  }
+
+  function updateInstallStatus(msg) {
+    document.getElementById('install-status').textContent = msg;
+  }
+
+  // ── Poll server status ─────────────────────────────────────────────────────
+  async function pollStatus() {
+    if (!window.pywebview) return;
+    const running = await window.pywebview.api.is_running();
+    setRunning(running);
+    setTimeout(pollStatus, 2000);
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  async function load() {
+    if (!window.pywebview) {
+      showView('view-installed');
+      return;
+    }
+
+    const state = await window.pywebview.api.get_state();
+
+    if (state.platform === 'linux' && !state.installed) {
+      showView('view-linux-setup');
+      return;
+    }
+
+    if (!state.installed) {
+      showView('view-not-installed');
+      return;
+    }
+
+    showView('view-installed');
+    populateInfo(state);
+    setRunning(state.running);
+    pollStatus();
+  }
+
+  window.addEventListener('pywebviewready', load);
+  if (window.pywebview) load();
+</script>
+</body>
+</html>

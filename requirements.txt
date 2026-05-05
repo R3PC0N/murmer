@@ -8,5 +8,5 @@ pystray
 Pillow
 anthropic
 python-dotenv
-customtkinter
+pywebview
 requests

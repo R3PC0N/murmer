@@ -45,6 +45,10 @@ def get_buffer() -> list[tuple[str, str, str]]:
     return list(_buffer)
 
 
+def clear_buffer():
+    _buffer.clear()
+
+
 def add_callback(cb):
     if cb not in _callbacks:
         _callbacks.append(cb)
