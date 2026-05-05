@@ -13,18 +13,18 @@ import '../services/storage_service.dart';
 enum _MicState { idle, recording, processing, success, error }
 
 // ── Design tokens ──────────────────────────────────────────────────────────
-const _bg            = Color(0xFF1A1A1A);
-const _borderIdle    = Color(0xFF666666);
-const _borderRec     = Color(0xFFFF3B30);
-const _borderProc    = Color(0xFFD4930A);
-const _borderSuccess = Color(0xFF34C759);
-const _borderError   = Color(0xFFFF3B30);
+const _bg            = Color(0xFF1C1C1E);  // matches app background
+const _borderIdle    = Color(0xFF48484A);  // iOS system separator grey
+const _borderRec     = Color(0xFFFF3B30);  // red — semantic, unchanged
+const _borderProc    = Color(0xFFC8922A);  // amber — matches logo
+const _borderSuccess = Color(0xFF34C759);  // green — semantic, unchanged
+const _borderError   = Color(0xFFFF3B30);  // red — semantic, unchanged
 
-const _iconIdle    = Color(0xFFCCCCCC);
-const _iconRec     = Color(0xFFFF3B30);
-const _iconProc    = Color(0xFFD4930A);
-const _iconSuccess = Color(0xFF34C759);
-const _iconError   = Color(0xFFFF3B30);
+const _iconIdle    = Color(0xFF8E8E93);  // iOS system grey (muted)
+const _iconRec     = Color(0xFFFF3B30);  // red — semantic, unchanged
+const _iconProc    = Color(0xFFC8922A);  // amber — matches logo
+const _iconSuccess = Color(0xFF34C759);  // green — semantic, unchanged
+const _iconError   = Color(0xFFFF3B30);  // red — semantic, unchanged
 
 const _size   = 68.0;
 const _radius = 16.0;
@@ -57,7 +57,7 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
 
     _animCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 2000), // matches landing page 2s wave
     )..repeat();
 
     // Phase: drives horizontal wave scroll
@@ -226,17 +226,24 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
             ),
           ),
         _ => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: LayoutBuilder(
               builder: (_, constraints) => CustomPaint(
                 size: Size(constraints.maxWidth, constraints.maxHeight),
-                painter: _SineWavePainter(
+                painter: _WaveformPainter(
                   phase: _phaseAnim.value,
                   color: iconColor,
+                  // speed: how fast the bars breathe (multiplier on phase)
+                  // minScale: lowest bar height as fraction of its natural height
                   speed: switch (_state) {
-                    _MicState.recording  => 1.0,
-                    _MicState.processing => 0.3,
-                    _                   => 0.0,
+                    _MicState.recording  => 2.0,  // fast & energetic
+                    _MicState.processing => 1.0,  // gentle, like landing page
+                    _                   => 0.0,   // static
+                  },
+                  minScale: switch (_state) {
+                    _MicState.recording  => 0.15, // dramatic swing
+                    _MicState.processing => 0.40, // subtle breathing
+                    _                   => 1.0,   // frozen at natural height
                   },
                 ),
               ),
@@ -247,61 +254,70 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
   }
 }
 
-// ── Sine wave painter ──────────────────────────────────────────────────────
+// ── Waveform painter — 7 bars matching the Murmur logo ───────────────────
 
-class _SineWavePainter extends CustomPainter {
-  /// 0→1 animation phase (from AnimationController)
+class _WaveformPainter extends CustomPainter {
+  /// 0→1 animation phase (from AnimationController).
   final double phase;
 
-  /// 0 = static, 1 = full scroll speed
-  final double speed;
-
+  /// Bar colour.
   final Color color;
 
-  const _SineWavePainter({
+  /// Phase multiplier: 0 = static, 1 = landing-page speed, 2 = fast recording.
+  final double speed;
+
+  /// Minimum bar height as a fraction of its natural height (0.15–1.0).
+  /// 1.0 means no animation (static at natural height).
+  final double minScale;
+
+  const _WaveformPainter({
     required this.phase,
-    required this.speed,
     required this.color,
+    this.speed    = 0.0,
+    this.minScale = 1.0,
   });
+
+  // Height ratios & stagger delays — identical to the logo and landing page.
+  static const _ratios = [0.25, 0.45, 0.65, 0.85, 0.65, 0.45, 0.25];
+  // Delays as fractions of one cycle; centre bar leads (delay 0), edges follow.
+  static const _delays = [0.54, 0.36, 0.18, 0.00, 0.18, 0.36, 0.54];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    final paint = Paint()..color = color..style = PaintingStyle.fill;
 
-    final centerY  = size.height / 2;
-    final amplitude = size.height * 0.38;
+    const n = 7;
+    // Bar width: ~11 % of available width; gap fills the rest evenly.
+    final barW = size.width * 0.11;
+    final gap  = (size.width - n * barW) / (n - 1);
+    final cy   = size.height / 2;
+    final r    = barW / 2;
 
-    // How many full cycles across the width (1.5 looks like the screenshot)
-    const cycles = 1.5;
-
-    // Horizontal scroll offset driven by phase * speed
-    final offset = phase * speed;
-
-    final path = Path();
-    const steps = 120; // sample points for smooth curve
-
-    for (int i = 0; i <= steps; i++) {
-      final t = i / steps; // 0→1 across width
-      final x = t * size.width;
-      final radians = (t * cycles + offset) * 2 * math.pi;
-      final y = centerY - amplitude * math.sin(radians);
-
-      if (i == 0) {
-        path.moveTo(x, y);
+    for (int i = 0; i < n; i++) {
+      double scaleY;
+      if (speed == 0.0) {
+        scaleY = 1.0; // static — no animation
       } else {
-        path.lineTo(x, y);
+        // Staggered sine: each bar breathes offset from its neighbours.
+        final t = ((phase * speed - _delays[i]) % 1.0 + 1.0) % 1.0;
+        final sine = math.sin(t * 2 * math.pi); // -1 → +1
+        // Map sine to [minScale, 1.0]
+        scaleY = minScale + (1.0 - minScale) * (sine * 0.5 + 0.5);
       }
-    }
 
-    canvas.drawPath(path, paint);
+      final h = (size.height * _ratios[i] * scaleY).clamp(2.0, size.height);
+      final x = i * (barW + gap);
+      final y = cy - h / 2;
+
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, barW, h), Radius.circular(r)),
+        paint,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(_SineWavePainter old) =>
-      old.phase != phase || old.color != color || old.speed != speed;
+  bool shouldRepaint(_WaveformPainter old) =>
+      old.phase != phase || old.color != color ||
+      old.speed != speed || old.minScale != minScale;
 }

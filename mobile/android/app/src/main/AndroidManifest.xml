@@ -20,7 +20,8 @@
     <application
         android:label="Murmur"
         android:name="${applicationName}"
-        android:icon="@android:mipmap/sym_def_app_icon">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher">
 
         <activity
             android:name=".MainActivity"
