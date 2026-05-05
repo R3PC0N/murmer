@@ -1,0 +1,28 @@
+Running Gradle task 'assembleDebug'...                          
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+Note: C:\Users\youri\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_overlay_window-0.5.0\android\src\main\java\flutter\overlay\window\flutter_overlay_window\OverlayService.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+3 warnings
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:processDebugResources'.
+> A failure occurred while executing com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$TaskAction
+   > Android resource linking failed
+     ERROR: D:\Code-Projects\wispr-app\.claude\worktrees\keen-shockley-daace4\mobile\android\app\src\main\res\xml\accessibility_service_config.xml:8: AAPT: error: 'typeNone' is incompatible with attribute accessibilityEventTypes (attr) flags [typeAllMask=4294967295, typeAnnouncement=16384, typeAssistReadingContext=16777216, typeContextClicked=8388608, typeGestureDetectionEnd=524288, typeGestureDetectionStart=262144, typeNotificationStateChanged=64, typeTouchExplorationGestureEnd=1024, typeTouchExplorationGestureStart=512, typeTouchInteractionEnd=2097152, typeTouchInteractionStart=1048576, typeViewAccessibilityFocusCleared=65536, typeViewAccessibilityFocused=32768, typeViewClicked=1, typeViewFocused=8, typeViewHoverEnter=128, typeViewHoverExit=256, typeViewLongClicked=2, typeViewScrolled=4096, typeViewSelected=4, typeViewTextChanged=16, typeViewTextSelectionChanged=8192, typeViewTextTraversedAtMovementGranularity=131072, typeWindowContentChanged=2048, typeWindowStateChanged=32, typeWindowsChanged=4194304].
+
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 21s
+Running Gradle task 'assembleDebug'...                             21,4s
+Gradle task assembleDebug failed with exit code 1
