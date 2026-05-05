@@ -8,52 +8,60 @@
     <title>Murmur — Free voice dictation</title>
     <style>
 
-        /* ── Colour tokens ───────────────────────────────────────────────────── */
+        /* ── Colour tokens — App palette ─────────────────────────────────────── */
+        /*
+         * Dark: matches the desktop app's own UI
+         *   #1c1c1e  — early window / overlay bg (iOS near-black)
+         *   #C8922A  — tray icon waveform amber (create_icon.py: bar_color)
+         *   #f0f0f0  — overlay text
+         *   #8e8e93  — iOS system gray (muted text)
+         *
+         * Light: iOS system light (grouped) — the natural counterpart
+         */
 
         :root,
         [data-theme="dark"] {
-            /* Dark — Noctua dark */
-            --bg:           #100B07;
-            --bg-raised:    #1A1109;
-            --surface:      #231810;
-            --border:       #3A2618;
-            --text:         #EDE0C4;
-            --muted:        #907055;
-            --subtle:       #5A3E28;
-            --accent:       #C8923A;
-            --accent-dim:   #A87530;
-            --accent-text:  #100B07;
-            --code-bg:      #0D0906;
+            --bg:           #1c1c1e;
+            --bg-raised:    #242426;
+            --surface:      #2c2c2e;
+            --border:       #48484a;
+            --text:         #f0f0f0;
+            --muted:        #8e8e93;
+            --subtle:       #636366;
+            --accent:       #C8922A;
+            --accent-dim:   #A87520;
+            --accent-text:  #1c1c1e;
+            --code-bg:      #131315;
         }
 
         @media (prefers-color-scheme: light) {
             :root {
-                --bg:           #F5EADA;
-                --bg-raised:    #EFE3CB;
-                --surface:      #E8D9BF;
-                --border:       #CDBF9F;
-                --text:         #1E1208;
-                --muted:        #7A5535;
-                --subtle:       #B89A72;
-                --accent:       #8B5820;
-                --accent-dim:   #7A4C18;
-                --accent-text:  #F5EADA;
-                --code-bg:      #E0D2B5;
+                --bg:           #f2f2f7;
+                --bg-raised:    #ffffff;
+                --surface:      #ffffff;
+                --border:       #c6c6c8;
+                --text:         #1c1c1e;
+                --muted:        #6c6c70;
+                --subtle:       #aeaeb2;
+                --accent:       #A87520;
+                --accent-dim:   #8B6118;
+                --accent-text:  #ffffff;
+                --code-bg:      #e5e5ea;
             }
         }
 
         [data-theme="light"] {
-            --bg:           #F5EADA;
-            --bg-raised:    #EFE3CB;
-            --surface:      #E8D9BF;
-            --border:       #CDBF9F;
-            --text:         #1E1208;
-            --muted:        #7A5535;
-            --subtle:       #B89A72;
-            --accent:       #8B5820;
-            --accent-dim:   #7A4C18;
-            --accent-text:  #F5EADA;
-            --code-bg:      #E0D2B5;
+            --bg:           #f2f2f7;
+            --bg-raised:    #ffffff;
+            --surface:      #ffffff;
+            --border:       #c6c6c8;
+            --text:         #1c1c1e;
+            --muted:        #6c6c70;
+            --subtle:       #aeaeb2;
+            --accent:       #A87520;
+            --accent-dim:   #8B6118;
+            --accent-text:  #ffffff;
+            --code-bg:      #e5e5ea;
         }
 
         /* ── Reset ───────────────────────────────────────────────────────────── */
@@ -425,8 +433,7 @@
 
         <div class="install-card">
             <h3>🪟 Windows</h3>
-            <pre>1. Install Python 3.10+ from python.org
-   Tick "Add Python to PATH" during setup
+            <pre>1. Install Python 3.10+ — tick "Add to PATH"
 2. Download and run Murmur-Setup-vX.X.exe
 3. Add your Anthropic API key to .env
    (optional — AI cleanup only)
