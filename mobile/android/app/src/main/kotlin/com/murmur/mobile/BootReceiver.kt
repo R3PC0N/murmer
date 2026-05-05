@@ -1,4 +1,4 @@
-package com.murmer.mobile
+package com.murmur.mobile
 
 import android.content.BroadcastReceiver
 import android.content.Context

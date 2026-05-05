@@ -289,7 +289,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               maxLines: 5,
               decoration: const InputDecoration(
                 labelText: 'Word corrections (optional)',
-                hintText: 'murmer=Murmer\ncuda=CUDA\nwhisper=Whisper',
+                hintText: 'murmur=Murmur\ncuda=CUDA\nwhisper=Whisper',
                 helperText: 'One correction per line: wrong=Correct',
                 alignLabelWithHint: true,
                 prefixIcon: Padding(

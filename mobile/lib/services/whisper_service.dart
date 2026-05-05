@@ -34,8 +34,8 @@ class WhisperService {
   }) async {
     // Step 1: transcribe audio via Whisper server
     final uri = Uri.parse('${_base(server)}/transcribe');
-    debugPrint('[Murmer] transcribe: building request to $uri');
-    debugPrint('[Murmer] audio file: ${audioFile.path} exists=${audioFile.existsSync()} size=${audioFile.lengthSync()}');
+    debugPrint('[Murmur] transcribe: building request to $uri');
+    debugPrint('[Murmur] audio file: ${audioFile.path} exists=${audioFile.existsSync()} size=${audioFile.lengthSync()}');
 
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll(_headers(server))
@@ -45,16 +45,16 @@ class WhisperService {
         filename: 'audio.wav',
       ));
 
-    debugPrint('[Murmer] sending request...');
+    debugPrint('[Murmur] sending request...');
     final resp = await Future(() async {
       final streamed = await request.send();
-      debugPrint('[Murmer] response status: ${streamed.statusCode}');
+      debugPrint('[Murmur] response status: ${streamed.statusCode}');
       return http.Response.fromStream(streamed);
     }).timeout(const Duration(seconds: 30), onTimeout: () {
-      debugPrint('[Murmer] TIMEOUT after 30s');
+      debugPrint('[Murmur] TIMEOUT after 30s');
       throw TimeoutException('Transcription timed out after 30s');
     });
-    debugPrint('[Murmer] response body length: ${resp.body.length}');
+    debugPrint('[Murmur] response body length: ${resp.body.length}');
 
     if (resp.statusCode != 200) {
       throw Exception('Transcription failed (${resp.statusCode}): ${resp.body}');

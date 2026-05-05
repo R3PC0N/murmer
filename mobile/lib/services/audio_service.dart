@@ -9,7 +9,7 @@ class AudioService {
 
   Future<void> startRecording() async {
     final dir = await getTemporaryDirectory();
-    final path = '${dir.path}/murmer_recording.wav';
+    final path = '${dir.path}/murmur_recording.wav';
 
     await _recorder.start(
       const RecordConfig(

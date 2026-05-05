@@ -27,16 +27,16 @@ void main() async {
 
   await StorageService.instance.init();
 
-  runApp(const MurmerApp());
+  runApp(const MurmurApp());
 }
 
-class MurmerApp extends StatelessWidget {
-  const MurmerApp({super.key});
+class MurmurApp extends StatelessWidget {
+  const MurmurApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Murmer',
+      title: 'Murmur',
       theme: AppTheme.dark,
       debugShowCheckedModeBanner: false,
       home: const HomeScreen(),

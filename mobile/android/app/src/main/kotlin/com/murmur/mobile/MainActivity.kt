@@ -1,4 +1,4 @@
-package com.murmer.mobile
+package com.murmur.mobile
 
 import android.content.Intent
 import android.provider.Settings
@@ -12,10 +12,10 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         // Accessibility service status + settings
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.murmer/accessibility")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.murmur/accessibility")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "isEnabled" -> result.success(MurmerAccessibilityService.isConnected())
+                    "isEnabled" -> result.success(MurmurAccessibilityService.isConnected())
                     "openSettings" -> {
                         startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                         result.success(null)
@@ -25,7 +25,7 @@ class MainActivity : FlutterActivity() {
             }
 
         // Main app channel — used to pass boot intent flag to Flutter
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.murmer/main")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.murmur/main")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "shouldAutoStartOverlay" -> {

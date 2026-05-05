@@ -1,5 +1,5 @@
-name: murmer_mobile
-description: Murmer voice dictation for Android — remote Whisper transcription with floating overlay.
+name: murmur_mobile
+description: Murmur voice dictation for Android — remote Whisper transcription with floating overlay.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -38,7 +38,7 @@ dependency_overrides:
   # Use local patched version of flutter_overlay_window.
   # Our patches add:
   #   - Null intent fix (START_STICKY on service restart)
-  #   - com.murmer/clipboard MethodChannel (copyText + pasteText via AccessibilityService)
+  #   - com.murmur/clipboard MethodChannel (copyText + pasteText via AccessibilityService)
   flutter_overlay_window:
     path: local_packages/flutter_overlay_window
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Murmer</string>
-    <string name="accessibility_service_description">Murmer uses accessibility to automatically paste transcribed text into the active text field.</string>
+    <string name="app_name">Murmur</string>
+    <string name="accessibility_service_description">Murmur uses accessibility to automatically paste transcribed text into the active text field.</string>
 </resources>

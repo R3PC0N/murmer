@@ -325,7 +325,7 @@ public class OverlayService extends Service implements View.OnTouchListener {
             // Register clipboard channel so the overlay Dart code can write to clipboard
             // and trigger auto-paste via the AccessibilityService (called via reflection
             // because OverlayService is plugin code and cannot import app classes directly).
-            new MethodChannel(flutterEngine.getDartExecutor(), "com.murmer/clipboard")
+            new MethodChannel(flutterEngine.getDartExecutor(), "com.murmur/clipboard")
                 .setMethodCallHandler((call, result) -> {
                     String text = call.argument("text");
                     if (text == null) { result.error("NULL_TEXT", "text is null", null); return; }
@@ -334,14 +334,14 @@ public class OverlayService extends Service implements View.OnTouchListener {
                     android.content.ClipboardManager cm = (android.content.ClipboardManager)
                         getSystemService(Context.CLIPBOARD_SERVICE);
                     android.content.ClipData clip =
-                        android.content.ClipData.newPlainText("murmer", text);
+                        android.content.ClipData.newPlainText("murmur", text);
                     cm.setPrimaryClip(clip);
 
                     if ("pasteText".equals(call.method)) {
                         // Also trigger paste into focused field via AccessibilityService.
                         // Pass text directly — Android 12+ blocks clipboard reads from services.
                         try {
-                            Class<?> svc = Class.forName("com.murmer.mobile.MurmerAccessibilityService");
+                            Class<?> svc = Class.forName("com.murmur.mobile.MurmurAccessibilityService");
                             java.lang.reflect.Method m = svc.getMethod("pasteText", String.class);
                             m.invoke(null, text);
                         } catch (Exception e) {
@@ -374,7 +374,7 @@ public class OverlayService extends Service implements View.OnTouchListener {
         instance = this;
     }
 
-    /** Called via reflection from MurmerAccessibilityService to show/hide the overlay. */
+    /** Called via reflection from MurmurAccessibilityService to show/hide the overlay. */
     public void setOverlayVisible(boolean visible) {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             if (flutterView != null) {

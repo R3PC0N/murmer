@@ -140,7 +140,7 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
       if (result.text.isNotEmpty) {
         setState(() => _state = _MicState.success);
 
-        const ch = MethodChannel('com.murmer/clipboard');
+        const ch = MethodChannel('com.murmur/clipboard');
         ch.invokeMethod('pasteText', {'text': result.text})
             .then((_) => _log('paste triggered'))
             .catchError((e) => _log('paste error: $e'));
@@ -164,7 +164,7 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
 
   void _log(String msg) {
     try {
-      File('/data/user/0/com.murmer.mobile/cache/murmer_debug.txt')
+      File('/data/user/0/com.murmur.mobile/cache/murmur_debug.txt')
           .writeAsStringSync('${DateTime.now().toIso8601String()} $msg\n',
               mode: FileMode.append);
     } catch (_) {}

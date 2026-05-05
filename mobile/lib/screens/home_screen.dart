@@ -21,8 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _storage = StorageService.instance;
   final _whisper = WhisperService();
 
-  static const _accessibilityChannel = MethodChannel('com.murmer/accessibility');
-  static const _mainChannel = MethodChannel('com.murmer/main');
+  static const _accessibilityChannel = MethodChannel('com.murmur/accessibility');
+  static const _mainChannel = MethodChannel('com.murmur/main');
 
   ServerConfig? _activeServer;
   Profile _activeProfile = Profile.defaultProfile;
@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await FlutterOverlayWindow.showOverlay(
       enableDrag: true,
-      overlayTitle: 'Murmer',
+      overlayTitle: 'Murmur',
       overlayContent: 'Voice dictation overlay',
       flag: OverlayFlag.defaultFlag,
       visibility: NotificationVisibility.visibilityPublic,
@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       await FlutterOverlayWindow.showOverlay(
         enableDrag: true,
-        overlayTitle: 'Murmer',
+        overlayTitle: 'Murmur',
         overlayContent: 'Voice dictation overlay',
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Murmer'),
+        title: const Text('Murmur'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -384,7 +384,7 @@ class _AccessibilityCard extends StatelessWidget {
         ),
         subtitle: Text(
           enabled
-              ? 'Murmer Accessibility Service is active'
+              ? 'Murmur Accessibility Service is active'
               : 'Tap to enable the Accessibility Service for auto-paste',
         ),
         trailing: enabled

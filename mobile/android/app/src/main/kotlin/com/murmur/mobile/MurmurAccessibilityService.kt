@@ -1,4 +1,4 @@
-package com.murmer.mobile
+package com.murmur.mobile
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -10,12 +10,12 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 
-class MurmerAccessibilityService : AccessibilityService() {
+class MurmurAccessibilityService : AccessibilityService() {
 
     companion object {
-        private const val TAG = "MurmerA11y"
+        private const val TAG = "MurmurA11y"
 
-        @Volatile var instance: MurmerAccessibilityService? = null
+        @Volatile var instance: MurmurAccessibilityService? = null
 
         @JvmStatic
         fun pasteText(text: String): Boolean {

@@ -167,12 +167,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SectionHeader('About'),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('Murmer Mobile'),
+            title: const Text('Murmur Mobile'),
             subtitle: const Text('Voice dictation via remote Whisper server'),
           ),
           ListTile(
             leading: const Icon(Icons.code),
-            title: const Text('github.com/R3PC0N/murmer'),
+            title: const Text('github.com/R3PC0N/murmur'),
           ),
           const SizedBox(height: 24),
         ],
