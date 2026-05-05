@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo  Murmer Whisper Server - Windows Setup
+echo  Murmur Whisper Server - Windows Setup
 echo ============================================
 echo.
 
@@ -25,7 +25,7 @@ if errorlevel 1 (
 echo.
 if not exist .env (
     copy .env.example .env
-    echo .env aangemaakt. Open .env en vul je MURMER_API_KEY in.
+    echo .env aangemaakt. Open .env en vul je MURMUR_API_KEY in.
 ) else (
     echo .env bestaat al.
 )

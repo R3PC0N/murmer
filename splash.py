@@ -18,7 +18,7 @@ class SplashScreen:
         sh = win.winfo_screenheight()
         win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
 
-        ctk.CTkLabel(win, text="Murmer",
+        ctk.CTkLabel(win, text="Murmur",
                      font=ctk.CTkFont(size=28, weight="bold")).pack(pady=(28, 6))
         ctk.CTkLabel(win, text="Loading speech model...",
                      font=ctk.CTkFont(size=13),

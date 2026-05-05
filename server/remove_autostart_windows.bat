@@ -1,5 +1,5 @@
 @echo off
-set VBS=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\MurmerWhisperServer.vbs
+set VBS=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\MurmurWhisperServer.vbs
 
 if exist "%VBS%" (
     del "%VBS%"

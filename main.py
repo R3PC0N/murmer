@@ -21,7 +21,7 @@ def _show_early_window():
     sh = win.winfo_screenheight()
     w, h = 300, 90
     win.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
-    _tk.Label(win, text="Murmer", fg="#ffffff", bg="#1c1c1e",
+    _tk.Label(win, text="Murmur", fg="#ffffff", bg="#1c1c1e",
               font=("Segoe UI", 24, "bold")).place(relx=0.5, rely=0.38, anchor="center")
     _tk.Label(win, text="Starting...", fg="#666666", bg="#1c1c1e",
               font=("Segoe UI", 11)).place(relx=0.5, rely=0.72, anchor="center")
@@ -88,12 +88,12 @@ _pynput_listener = None  # Linux only
 def _ensure_single_instance():
     global _mutex, _lock_file
     if sys.platform == "win32":
-        _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmerSingleInstance")
+        _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\MurmurSingleInstance")
         if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
             sys.exit(0)
     else:
         import fcntl, tempfile
-        lock_path = Path(tempfile.gettempdir()) / "murmer.lock"
+        lock_path = Path(tempfile.gettempdir()) / "murmur.lock"
         _lock_file = open(lock_path, "w")
         try:
             fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -448,7 +448,7 @@ def _background_init(splash: SplashScreen):
     logger.log(f"Ready. Hold {key} to record, release to transcribe and paste.")
 
     menu = pystray.Menu(
-        pystray.MenuItem("Murmer", None, enabled=False),
+        pystray.MenuItem("Murmur", None, enabled=False),
         pystray.MenuItem(f"Hold {key} to record", None, enabled=False),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Settings",      lambda icon, item: _open_settings()),
@@ -465,7 +465,7 @@ def _background_init(splash: SplashScreen):
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", lambda icon, item: _quit()),
     )
-    _icon = pystray.Icon("murmer", _make_icon(), "Murmer", menu)
+    _icon = pystray.Icon("murmur", _make_icon(), "Murmur", menu)
 
     threading.Thread(target=_keyboard_listener, daemon=True).start()
 

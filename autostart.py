@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-_APP_NAME = "Murmer"
+_APP_NAME = "Murmur"
 
 
 def _command() -> str:
@@ -40,7 +40,7 @@ if sys.platform == "win32":
 
 else:
     _DESKTOP_DIR = Path.home() / ".config" / "autostart"
-    _DESKTOP_FILE = _DESKTOP_DIR / "murmer.desktop"
+    _DESKTOP_FILE = _DESKTOP_DIR / "murmur.desktop"
 
     def is_enabled() -> bool:
         return _DESKTOP_FILE.exists()

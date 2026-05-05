@@ -7,5 +7,5 @@ if not exist venv\Scripts\python.exe (
     exit /b 1
 )
 
-echo Murmer Whisper Server starten...
+echo Murmur Whisper Server starten...
 venv\Scripts\python.exe faster_whisper_server.py

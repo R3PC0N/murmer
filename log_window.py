@@ -18,7 +18,7 @@ class LogWindow:
 
     def _build(self):
         win = ctk.CTkToplevel(self._root)
-        win.title("Murmer — Activity")
+        win.title("Murmur — Activity")
         win.geometry("580x420")
         win.protocol("WM_DELETE_WINDOW", self._on_close)
         win.after(100, win.lift)

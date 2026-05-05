@@ -32,11 +32,11 @@ def _open_firewall_port():
         # First check if a rule already exists so we don't duplicate
         check = subprocess.run(
             ["netsh", "advfirewall", "firewall", "show", "rule",
-             "name=Murmer Whisper Server"],
+             "name=Murmur Whisper Server"],
             capture_output=True, text=True,
             creationflags=_NO_WINDOW,
         )
-        if "Murmer Whisper Server" in check.stdout:
+        if "Murmur Whisper Server" in check.stdout:
             return  # Rule already exists
 
         # Rule missing — add it via an elevated PowerShell process (triggers UAC once)
@@ -44,7 +44,7 @@ def _open_firewall_port():
             ["powershell", "-Command",
              "Start-Process powershell "
              "-ArgumentList '-NoProfile -Command "
-             'New-NetFirewallRule -DisplayName \\"Murmer Whisper Server\\" '
+             'New-NetFirewallRule -DisplayName \\"Murmur Whisper Server\\" '
              "-Direction Inbound -Protocol TCP -LocalPort 8765 "
              '-Action Allow -ErrorAction SilentlyContinue\' '
              "-Verb RunAs -Wait"],
@@ -87,7 +87,7 @@ def _get_local_ip() -> str | None:
 def _get_api_key() -> str:
     if _ENV_FILE.exists():
         for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
-            if line.startswith("MURMER_API_KEY="):
+            if line.startswith("MURMUR_API_KEY="):
                 val = line.split("=", 1)[1].strip()
                 if val and val != "vervang-dit-met-een-sterk-wachtwoord":
                     return val
@@ -111,7 +111,7 @@ class ServerManagerWindow:
 
     def _build(self):
         win = ctk.CTkToplevel(self._root)
-        win.title("Murmer — Whisper Server")
+        win.title("Murmur — Whisper Server")
         win.geometry("480x520")
         win.resizable(False, False)
         win.after(100, win.lift)
@@ -143,14 +143,14 @@ class ServerManagerWindow:
             "source venv/bin/activate\n"
             "pip install -r requirements.txt\n"
             "cp .env.example .env\n"
-            "nano .env   # set MURMER_API_KEY"
+            "nano .env   # set MURMUR_API_KEY"
         )
         self._linux_step(scroll, "2. Start manually",
             "python faster_whisper_server.py"
         )
         self._linux_step(scroll, "3. Or run as a systemd service",
-            "sudo cp murmer-whisper.service /etc/systemd/system/\n"
-            "sudo systemctl enable --now murmer-whisper"
+            "sudo cp murmur-whisper.service /etc/systemd/system/\n"
+            "sudo systemctl enable --now murmur-whisper"
         )
 
         ctk.CTkLabel(win,
@@ -223,7 +223,7 @@ class ServerManagerWindow:
             self._copy_btn.pack(side="left")
         else:
             ctk.CTkLabel(info_frame,
-                         text="API key not set — edit server/.env and set MURMER_API_KEY.",
+                         text="API key not set — edit server/.env and set MURMUR_API_KEY.",
                          font=ctk.CTkFont(size=11), text_color="#E07B39",
                          justify="left").pack(anchor="w", padx=16, pady=(2, 12))
 
@@ -260,7 +260,7 @@ class ServerManagerWindow:
             "  1. Install the server on this PC (one time)\n"
             "  2. Make this PC reachable from your other device\n"
             "     (local network, Tailscale, or a reverse proxy)\n"
-            "  3. In Murmer Settings, set Mode to Remote and\n"
+            "  3. In Murmur Settings, set Mode to Remote and\n"
             "     enter this PC's URL + the API key\n\n"
             "The server runs silently in the background and\n"
             "can be started or stopped from this menu."
@@ -457,14 +457,14 @@ class ServerManagerWindow:
         # Autostart toggle
         autostart_row = ctk.CTkFrame(win, fg_color="transparent")
         autostart_row.pack(fill="x", padx=24, pady=(12, 4))
-        ctk.CTkLabel(autostart_row, text="Start server when Murmer launches",
+        ctk.CTkLabel(autostart_row, text="Start server when Murmur launches",
                      font=ctk.CTkFont(size=12)).pack(side="left")
         self._autostart_var = ctk.BooleanVar(value=config.WHISPER_SERVER_AUTOSTART)
         ctk.CTkSwitch(autostart_row, text="", variable=self._autostart_var,
                       width=52, command=self._save_autostart).pack(side="right")
 
         ctk.CTkLabel(win,
-                     text="On your other device: open Murmer → Settings → Transcription\n"
+                     text="On your other device: open Murmur → Settings → Transcription\n"
                           "Set Mode to Remote and enter the URL and API key above.",
                      font=ctk.CTkFont(size=11), text_color="#666",
                      justify="left").pack(padx=24, pady=(4, 0))
@@ -503,16 +503,16 @@ class ServerManagerWindow:
                 new_lines = []
                 replaced = False
                 for line in lines:
-                    if line.startswith("MURMER_API_KEY="):
-                        new_lines.append(f"MURMER_API_KEY={key}")
+                    if line.startswith("MURMUR_API_KEY="):
+                        new_lines.append(f"MURMUR_API_KEY={key}")
                         replaced = True
                     else:
                         new_lines.append(line)
                 if not replaced:
-                    new_lines.append(f"MURMER_API_KEY={key}")
+                    new_lines.append(f"MURMUR_API_KEY={key}")
                 _ENV_FILE.write_text("\n".join(new_lines), encoding="utf-8")
             else:
-                _ENV_FILE.write_text(f"MURMER_API_KEY={key}\n", encoding="utf-8")
+                _ENV_FILE.write_text(f"MURMUR_API_KEY={key}\n", encoding="utf-8")
             logger.log("Whisper Server API key gegenereerd en opgeslagen.")
             # Herstart server zodat nieuwe key actief wordt
             if self._get_server_running():

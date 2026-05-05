@@ -11,7 +11,7 @@ from faster_whisper import WhisperModel
 
 load_dotenv()
 
-API_KEY       = os.getenv("MURMER_API_KEY", "")
+API_KEY       = os.getenv("MURMUR_API_KEY", "")
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "medium")
 WHISPER_DEVICE       = os.getenv("WHISPER_DEVICE", "cuda")
 WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "float16")

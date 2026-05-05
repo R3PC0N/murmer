@@ -1,0 +1,15 @@
+[Unit]
+Description=Murmur Whisper Transcription Server
+After=network.target
+
+[Service]
+Type=simple
+User=r3pc0n
+WorkingDirectory=/opt/murmur-server
+EnvironmentFile=/opt/murmur-server/.env
+ExecStart=/opt/murmur-server/venv/bin/python faster_whisper_server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

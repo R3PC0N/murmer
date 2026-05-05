@@ -10,9 +10,9 @@ from pathlib import Path
 #   ERROR       — errors (shown in all modes)
 
 if sys.platform == "win32":
-    _HISTORY_FILE = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmer" / "history.log"
+    _HISTORY_FILE = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmur" / "history.log"
 else:
-    _HISTORY_FILE = Path.home() / ".local" / "share" / "Murmer" / "history.log"
+    _HISTORY_FILE = Path.home() / ".local" / "share" / "Murmur" / "history.log"
 _buffer: list[tuple[str, str, str]] = []  # (timestamp, level, message)
 _callbacks: list = []
 

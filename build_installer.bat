@@ -1,5 +1,5 @@
 @echo off
-echo === Building Murmer Installer ===
+echo === Building Murmur Installer ===
 echo.
 
 set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -14,7 +14,7 @@ if not exist %ISCC% (
     exit /b 1
 )
 
-%ISCC% murmer.iss
+%ISCC% murmur.iss
 
 if errorlevel 1 (
     echo.
@@ -22,7 +22,7 @@ if errorlevel 1 (
 ) else (
     echo.
     echo Build successful!
-    echo Installer: dist\Murmer-Setup-v1.0.exe
+    echo Installer: dist\Murmur-Setup-v1.0.exe
 )
 
 echo.

@@ -47,7 +47,7 @@ class SettingsWindow:
 
     def _build(self):
         win = ctk.CTkToplevel(self._root)
-        win.title("Murmer — Settings")
+        win.title("Murmur — Settings")
         win.geometry("720x500")
         win.minsize(600, 420)
         win.resizable(True, True)

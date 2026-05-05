@@ -7,7 +7,7 @@ RED='\033[0;31m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-echo -e "${BOLD}Murmer — Linux Setup${NC}"
+echo -e "${BOLD}Murmur — Linux Setup${NC}"
 echo "================================"
 echo ""
 
@@ -117,31 +117,31 @@ echo ""
 if command -v nvidia-smi &> /dev/null; then
     GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
     echo -e "${GREEN}✓ NVIDIA GPU detected: $GPU${NC}"
-    echo "  Murmer will use CUDA by default (large-v3 model)."
+    echo "  Murmur will use CUDA by default (large-v3 model)."
     echo "  Make sure the CUDA libraries are installed for faster-whisper."
 else
-    echo -e "${YELLOW}→ No NVIDIA GPU detected — Murmer will run on CPU.${NC}"
+    echo -e "${YELLOW}→ No NVIDIA GPU detected — Murmur will run on CPU.${NC}"
     echo "  Consider using the medium model in Settings → Transcription."
 fi
 
 # ── Launch script ─────────────────────────────────────────────────────────────
 echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cat > murmer.sh << EOF
+cat > murmur.sh << EOF
 #!/bin/bash
 cd "$SCRIPT_DIR"
 exec ./venv/bin/python main.py "\$@"
 EOF
-chmod +x murmer.sh
-echo -e "${GREEN}✓ Created launch script: murmer.sh${NC}"
+chmod +x murmur.sh
+echo -e "${GREEN}✓ Created launch script: murmur.sh${NC}"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}================================${NC}"
 echo -e "${GREEN}Setup complete!${NC}"
 echo ""
-echo "Start Murmer with:"
-echo -e "  ${BOLD}./murmer.sh${NC}"
+echo "Start Murmur with:"
+echo -e "  ${BOLD}./murmur.sh${NC}"
 echo ""
 
 if [ -n "$NEED_RELOGIN" ]; then

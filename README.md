@@ -1,8 +1,8 @@
-# Murmer
+# Murmur
 
 **Free, local voice dictation for Windows and Linux.**
 
-Hold a key, speak, release. Murmer transcribes your voice using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and pastes the result into whatever app you have focused. Optionally, Claude Haiku cleans up filler words and fixes punctuation before pasting.
+Hold a key, speak, release. Murmur transcribes your voice using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and pastes the result into whatever app you have focused. Optionally, Claude Haiku cleans up filler words and fixes punctuation before pasting.
 
 No subscription. No cloud. Your audio never leaves your machine - unless you choose to use a remote server you control yourself.
 
@@ -47,7 +47,7 @@ Run `setup_linux.sh` — it handles everything automatically. See [Linux setup](
 | **NVIDIA GPU Driver** | Latest | [nvidia.com/drivers](https://www.nvidia.com/Download/index.aspx) |
 | **NVIDIA CUDA Toolkit** | 12.x | [developer.nvidia.com/cuda-toolkit-archive](https://developer.nvidia.com/cuda-toolkit-archive) |
 
-Without CUDA, Murmer falls back to CPU transcription automatically. The installer detects this and sets a lighter model (`medium`, `int8`) as the default.
+Without CUDA, Murmur falls back to CPU transcription automatically. The installer detects this and sets a lighter model (`medium`, `int8`) as the default.
 
 ### For AI cleanup (optional)
 
@@ -61,19 +61,19 @@ Without CUDA, Murmer falls back to CPU transcription automatically. The installe
 
 ### Windows
 
-1. Download the latest installer from [Releases](https://github.com/R3PC0N/murmer/releases)
-2. Run `Murmer-Setup-vX.X.exe`
+1. Download the latest installer from [Releases](https://github.com/R3PC0N/murmur/releases)
+2. Run `Murmur-Setup-vX.X.exe`
 3. The installer will:
    - Create a Python virtual environment
    - Install all Python dependencies
    - Create a Start Menu shortcut (and optionally a desktop shortcut)
-4. On first launch, Murmer downloads the Whisper speech model (~300 MB for `medium`, ~1.5 GB for `large-v3`). A loading screen will appear - just wait until it disappears.
+4. On first launch, Murmur downloads the Whisper speech model (~300 MB for `medium`, ~1.5 GB for `large-v3`). A loading screen will appear - just wait until it disappears.
 
 ### Linux setup
 
 ```bash
-git clone https://github.com/R3PC0N/murmer.git
-cd murmer
+git clone https://github.com/R3PC0N/murmur.git
+cd murmur
 bash setup_linux.sh
 ```
 
@@ -81,10 +81,10 @@ The script installs all system packages, creates a virtual environment, installs
 
 > ⚠ After setup, **log out and back in** once so the hotkey takes effect (input group).
 
-Start Murmer:
+Start Murmur:
 
 ```bash
-./murmer.sh
+./murmur.sh
 ```
 
 ---
@@ -93,19 +93,19 @@ Start Murmer:
 
 ### 1. AI cleanup (optional but recommended)
 
-**Windows:** open `%LOCALAPPDATA%\Murmer\.env` in a text editor and add your key:
+**Windows:** open `%LOCALAPPDATA%\Murmur\.env` in a text editor and add your key:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-**Linux:** open `.env` in the Murmer folder and add the same line.
+**Linux:** open `.env` in the Murmur folder and add the same line.
 
 Or enter it directly in **Settings → AI Cleanup**.
 
 ### 2. Start dictating
 
-Murmer starts in the system tray. Hold **F9** anywhere, speak, release. The transcribed text is pasted into your active window.
+Murmur starts in the system tray. Hold **F9** anywhere, speak, release. The transcribed text is pasted into your active window.
 
 The hotkey can be changed in **Settings → General**.
 
@@ -129,7 +129,7 @@ Open Settings from the tray icon (right-click → Settings).
 In **Profile → Word corrections**, add one correction per line:
 
 ```
-murmer=Murmer
+murmur=Murmur
 cuda=CUDA
 ```
 
@@ -151,7 +151,7 @@ Choose a style in **Profile → Transcription style**:
 
 ## Remote transcription
 
-Murmer can send audio to a Whisper server running on another machine - useful if your laptop is slow but you have a powerful desktop or home server.
+Murmur can send audio to a Whisper server running on another machine - useful if your laptop is slow but you have a powerful desktop or home server.
 
 ### How it works
 
@@ -183,35 +183,35 @@ https://whisper.yourdomain.com
 
 **Direct port forwarding** — open port 8765 (or 443 via a reverse proxy) on your router and point it at the server machine. Combine with a dynamic DNS service if your home IP changes.
 
-### Windows server (via Murmer UI)
+### Windows server (via Murmur UI)
 
-If your server is a Windows PC with Murmer installed:
+If your server is a Windows PC with Murmur installed:
 
-1. On the server PC: right-click the Murmer tray icon → **Whisper Server...**
+1. On the server PC: right-click the Murmur tray icon → **Whisper Server...**
 2. Click **Install Server** (one-time setup, downloads ~500 MB)
 3. Click **Generate** to create an API key
 4. Note the **Remote URL** and **API key** shown in the window
 5. On the client: open **Settings → Transcription**, switch to **Remote**, paste the URL and key
 6. Click **Save current as...** to save this server for quick access later
 
-The server can be started and stopped from the tray icon at any time. Enable **"Start server when Murmer launches"** to have it start automatically.
+The server can be started and stopped from the tray icon at any time. Enable **"Start server when Murmur launches"** to have it start automatically.
 
 ### Linux server (Ubuntu / Debian)
 
 Requirements: Python 3.10+, CUDA 12.x (for GPU), or CPU-only.
 
 ```bash
-cd murmer/server
+cd murmur/server
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-nano .env  # set MURMER_API_KEY and optionally WHISPER_MODEL, WHISPER_DEVICE
+nano .env  # set MURMUR_API_KEY and optionally WHISPER_MODEL, WHISPER_DEVICE
 ```
 
 **.env example:**
 ```
-MURMER_API_KEY=your-strong-random-key
+MURMUR_API_KEY=your-strong-random-key
 WHISPER_MODEL=medium
 WHISPER_DEVICE=cuda
 WHISPER_COMPUTE_TYPE=float16
@@ -224,9 +224,9 @@ python faster_whisper_server.py
 
 **Run as a systemd service:**
 ```bash
-sudo cp murmer-whisper.service /etc/systemd/system/
+sudo cp murmur-whisper.service /etc/systemd/system/
 # Edit the service file to match your paths and username
-sudo systemctl enable --now murmer-whisper
+sudo systemctl enable --now murmur-whisper
 ```
 
 > If your CUDA libraries are in a non-standard location (e.g. installed via Ollama), add the path to `LD_LIBRARY_PATH` in the service file:
@@ -257,8 +257,8 @@ Full history is saved to disk. Open it via tray → **Open history**.
 
 **Windows:**
 ```bat
-git clone https://github.com/R3PC0N/murmer.git
-cd murmer
+git clone https://github.com/R3PC0N/murmur.git
+cd murmur
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
@@ -267,17 +267,17 @@ python main.py
 
 **Linux:**
 ```bash
-git clone https://github.com/R3PC0N/murmer.git
-cd murmer
+git clone https://github.com/R3PC0N/murmur.git
+cd murmur
 bash setup_linux.sh
-./murmer.sh
+./murmur.sh
 ```
 
 **Building the Windows installer** (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
 
 ```
-Open murmer.iss in Inno Setup → press F9
-Output: dist\Murmer-Setup-vX.X.exe
+Open murmur.iss in Inno Setup → press F9
+Output: dist\Murmur-Setup-vX.X.exe
 ```
 
 ---

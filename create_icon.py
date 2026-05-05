@@ -1,4 +1,4 @@
-"""Run this script once to generate murmer.ico."""
+"""Run this script once to generate murmur.ico."""
 from PIL import Image, ImageDraw
 
 
@@ -40,9 +40,9 @@ def _draw(size: int) -> Image.Image:
 sizes = [16, 24, 32, 48, 64, 128, 256]
 images = [_draw(s) for s in sizes]
 images[0].save(
-    "murmer.ico",
+    "murmur.ico",
     format="ICO",
     append_images=images[1:],
     sizes=[(s, s) for s in sizes],
 )
-print("murmer.ico gegenereerd.")
+print("murmur.ico gegenereerd.")

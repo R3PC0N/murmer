@@ -2,10 +2,10 @@
 cd /d "%~dp0"
 
 set STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
-set VBS=%STARTUP%\MurmerWhisperServer.vbs
+set VBS=%STARTUP%\MurmurWhisperServer.vbs
 set BAT=%~dp0start_server.bat
 
-echo Autostart instellen voor Murmer Whisper Server...
+echo Autostart instellen voor Murmur Whisper Server...
 
 (
 echo Set WshShell = CreateObject^("WScript.Shell"^)

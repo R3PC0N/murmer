@@ -1,9 +1,9 @@
 ; ============================================================
-;  Murmer — Inno Setup Installer Script
-;  https://github.com/R3PC0N/murmer
+;  Murmur — Inno Setup Installer Script
+;  https://github.com/R3PC0N/murmur
 ; ============================================================
 
-#define AppName      "Murmer"
+#define AppName      "Murmur"
 #define AppVersion   "1.1"
 #define AppPublisher "R3PC0N"
 
@@ -12,11 +12,11 @@ AppId={{C7F8A2B1-3D4E-5F6A-7B8C-9D0E1F2A3B4C}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-AppPublisherURL=https://github.com/R3PC0N/murmer
+AppPublisherURL=https://github.com/R3PC0N/murmur
 DefaultDirName={localappdata}\{#AppName}
 DisableProgramGroupPage=yes
 OutputDir=dist
-OutputBaseFilename=Murmer-Setup-v{#AppVersion}
+OutputBaseFilename=Murmur-Setup-v{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -44,15 +44,15 @@ Source: "logger.py";           DestDir: "{app}"; Flags: ignoreversion
 Source: "log_window.py";       DestDir: "{app}"; Flags: ignoreversion
 Source: "requirements.txt";    DestDir: "{app}"; Flags: ignoreversion
 Source: ".env.example"; DestDir: "{app}"; DestName: ".env.example"; Flags: ignoreversion
-Source: "murmer.ico";                    DestDir: "{app}"; Flags: ignoreversion
+Source: "murmur.ico";                    DestDir: "{app}"; Flags: ignoreversion
 Source: "server_manager_window.py";      DestDir: "{app}"; Flags: ignoreversion
 Source: "server\faster_whisper_server.py"; DestDir: "{app}\server"; Flags: ignoreversion
 Source: "server\requirements.txt";      DestDir: "{app}\server"; Flags: ignoreversion
 Source: "server\.env.example";          DestDir: "{app}\server"; DestName: ".env.example"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmer.ico"; Comment: "Voice dictation with AI cleanup"
-Name: "{autodesktop}\{#AppName}";  Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmer.ico"; Tasks: desktopicon; Comment: "Voice dictation with AI cleanup"
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmur.ico"; Comment: "Voice dictation with AI cleanup"
+Name: "{autodesktop}\{#AppName}";  Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; WorkingDir: "{app}"; IconFilename: "{app}\murmur.ico"; Tasks: desktopicon; Comment: "Voice dictation with AI cleanup"
 
 [Run]
 Filename: "python.exe"; Parameters: "-m venv ""{app}\venv"""; StatusMsg: "Creating virtual environment..."; Flags: runhidden waituntilterminated
@@ -120,11 +120,11 @@ begin
   begin
     MsgBox(
       'CUDA Toolkit 12.x was not detected on this machine.' + #13#10#13#10 +
-      'Murmer will be installed and will work using your CPU.' + #13#10 +
+      'Murmur will be installed and will work using your CPU.' + #13#10 +
       'For much faster transcription with an NVIDIA GPU, install' + #13#10 +
       'CUDA Toolkit 12.x from:' + #13#10 +
       'https://developer.nvidia.com/cuda-toolkit-archive' + #13#10#13#10 +
-      'Afterwards, open Murmer Settings and set Device to "cuda".',
+      'Afterwards, open Murmur Settings and set Device to "cuda".',
       mbInformation, MB_OK
     );
   end;
@@ -153,7 +153,7 @@ begin
         '}', False);
 
     MsgBox(
-      'Murmer is installed!' + #13#10#13#10 +
+      'Murmur is installed!' + #13#10#13#10 +
       'Before you start, two things to know:' + #13#10#13#10 +
       '1) API key for AI cleanup:' + #13#10 +
       '   Open ' + EnvFile + #13#10 +
