@@ -1,5 +1,5 @@
 @echo off
-echo === Murmur Setup ===
+echo === Wispr Clone Setup ===
 
 python --version >nul 2>&1
 if errorlevel 1 (
