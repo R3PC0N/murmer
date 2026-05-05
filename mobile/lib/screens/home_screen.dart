@@ -227,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _load();
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
 
             // Overlay toggle
             Center(
@@ -242,22 +242,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _overlayActive
-                            ? cs.primary
+                            ? cs.primary.withOpacity(0.15)
                             : cs.surfaceContainerHighest,
+                        border: Border.all(
+                          color: _overlayActive
+                              ? cs.primary
+                              : cs.outline.withOpacity(0.3),
+                          width: 2,
+                        ),
                         boxShadow: _overlayActive
                             ? [
                                 BoxShadow(
-                                  color: cs.primary.withOpacity(0.4),
+                                  color: cs.primary.withOpacity(0.3),
                                   blurRadius: 24,
                                   spreadRadius: 4,
                                 )
                               ]
                             : [],
                       ),
-                      child: Icon(
-                        _overlayActive ? Icons.mic : Icons.mic_off,
-                        size: 52,
-                        color: _overlayActive ? Colors.white : cs.onSurface,
+                      child: Center(
+                        child: _WaveformIcon(
+                          color: _overlayActive
+                              ? cs.primary
+                              : cs.onSurface.withOpacity(0.4),
+                        ),
                       ),
                     ),
                   ),
@@ -280,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
 
             // Setup card (no server) OR quick tips (server configured, overlay off)
             if (_activeServer == null) ...[
@@ -445,6 +453,56 @@ class _TipCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Waveform icon — static 7-bar logo mark ────────────────────────────────
+
+class _WaveformIcon extends StatelessWidget {
+  final Color color;
+  final double width;
+  final double height;
+
+  const _WaveformIcon({
+    required this.color,
+    this.width  = 54,
+    this.height = 38,
+  });
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        size: Size(width, height),
+        painter: _StaticWaveformPainter(color: color),
+      );
+}
+
+class _StaticWaveformPainter extends CustomPainter {
+  final Color color;
+  static const _ratios = [0.25, 0.45, 0.65, 0.85, 0.65, 0.45, 0.25];
+
+  const _StaticWaveformPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color..style = PaintingStyle.fill;
+    const n = 7;
+    final barW = size.width * 0.10;
+    final gap  = (size.width - n * barW) / (n - 1);
+    final cy   = size.height / 2;
+    final r    = barW / 2;
+
+    for (int i = 0; i < n; i++) {
+      final h = size.height * _ratios[i];
+      final x = i * (barW + gap);
+      final y = cy - h / 2;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, barW, h), Radius.circular(r)),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StaticWaveformPainter old) => old.color != color;
 }
 
 // ── Setup card — shown when no server is configured ────────────────────────
