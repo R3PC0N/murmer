@@ -21,6 +21,7 @@ class StorageService {
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    await _prefs.reload(); // Always sync from disk — overlay engine may have stale cache
     _ensureDefaults();
   }
 

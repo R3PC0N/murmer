@@ -112,6 +112,8 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
 
     if (file == null) { _flashError('No audio'); return; }
 
+    // Reload from disk — overlay engine may cache stale SharedPreferences
+    await _storage.init();
     final server = _storage.getActiveServer();
     if (server == null) { _flashError('No server'); return; }
 
