@@ -1,6 +1,7 @@
 package com.murmur.mobile
 
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -36,6 +37,11 @@ class MainActivity : FlutterActivity() {
                     }
                     "moveToBackground" -> {
                         moveTaskToBack(true)
+                        result.success(null)
+                    }
+                    "openUrl" -> {
+                        val url = call.argument<String>("url") ?: ""
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         result.success(null)
                     }
                     else -> result.notImplemented()

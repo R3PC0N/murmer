@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import '../models/server_config.dart';
 import '../models/profile.dart';
 import '../services/storage_service.dart';
 import '../services/whisper_service.dart';
 import 'settings/settings_screen.dart';
 import 'profile/profile_screen.dart';
+
+const _websiteUrl = 'https://murmurlabs.dev';
+
+Future<void> _openWebsite() async {
+  try {
+    await const MethodChannel('com.murmur/main')
+        .invokeMethod('openUrl', {'url': _websiteUrl});
+  } catch (_) {}
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -274,8 +282,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 40),
 
-            // Quick tips
-            if (!_overlayActive) ...[
+            // Setup card (no server) OR quick tips (server configured, overlay off)
+            if (_activeServer == null) ...[
+              const _SetupCard(),
+              const SizedBox(height: 8),
+            ] else if (!_overlayActive) ...[
               _TipCard(
                 icon: Icons.swipe,
                 text: 'Enable the overlay, then switch to any app. '
@@ -288,7 +299,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     'pasted into the focused text field. Enable the '
                     'Accessibility service above for this to work.',
               ),
+              const SizedBox(height: 8),
             ],
+
+            // Footer — always visible
+            const _Footer(),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -426,6 +442,103 @@ class _TipCard extends StatelessWidget {
                     ?.copyWith(color: cs.onSurfaceVariant)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Setup card — shown when no server is configured ────────────────────────
+
+class _SetupCard extends StatelessWidget {
+  const _SetupCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.primary.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.computer, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Desktop app required',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Murmur transcribes your voice via a local Whisper server '
+            'running on your PC or home server. Download and set up the '
+            'desktop app first, then add the server URL in Settings.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _openWebsite,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Get started at murmurlabs.dev',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.open_in_new, size: 14, color: cs.primary),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Footer — always visible at the bottom ─────────────────────────────────
+
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: GestureDetector(
+        onTap: _openWebsite,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'murmurlabs.dev',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(width: 3),
+              Icon(Icons.open_in_new, size: 11, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }
