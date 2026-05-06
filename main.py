@@ -395,16 +395,19 @@ def _stop_whisper_server():
 # ── Window openers ────────────────────────────────────────────────────────────
 
 def _open_settings():
+    print("[DBG] _open_settings called", flush=True)
     if settings_win:
         _gtk_dispatch(settings_win.open)
 
 
 def _open_log():
+    print("[DBG] _open_log called", flush=True)
     if log_win:
         _gtk_dispatch(log_win.open)
 
 
 def _open_server_manager():
+    print("[DBG] _open_server_manager called", flush=True)
     if server_manager_win:
         _gtk_dispatch(server_manager_win.open)
 
@@ -539,6 +542,7 @@ def _background_init():
         from gi.repository import GLib
 
         def _init_pystray_on_gtk_thread():
+            print("[DBG] _init_pystray_on_gtk_thread fired", flush=True)
             try:
                 from gi.repository import Gtk
                 _orig_main = Gtk.main
@@ -550,13 +554,21 @@ def _background_init():
                 finally:
                     Gtk.main = _orig_main
                     Gtk.main_quit = _orig_quit
+                print(f"[DBG] after run(): _running={_icon._running}, "
+                      f"attrs={[a for a in dir(_icon) if not a.startswith('__')]}", flush=True)
                 # Restore state pystray's cleanup tore down.
                 _icon._running = True
                 _icon._executor = concurrent.futures.ThreadPoolExecutor()
                 if hasattr(_icon, "_indicator"):
                     from gi.repository import AppIndicator3
                     _icon._indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
+                    print("[DBG] indicator re-activated", flush=True)
+                else:
+                    print(f"[DBG] no _indicator attr; icon type={type(_icon)}", flush=True)
+                # Verify idle_add dispatch works by scheduling a test print.
+                GLib.idle_add(lambda: print("[DBG] GLib.idle_add test fired", flush=True) or False)
             except Exception as e:
+                print(f"[DBG] pystray init exception: {e}", flush=True)
                 logger.log(f"Tray icon init error: {e}", level="ERROR")
             return False  # idle_add: run once
 
