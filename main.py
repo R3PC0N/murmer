@@ -54,10 +54,16 @@ def _build_transparent_ico() -> str:
                 radius=bar_r, fill="#C8922A",
             )
         images.append(img)
-    tmp = tempfile.NamedTemporaryFile(suffix=".ico", delete=False)
-    tmp.close()
-    images[0].save(tmp.name, format="ICO", append_images=images[1:],
-                   sizes=[(s, s) for s in sizes])
+    # gdk-pixbuf on Linux does not support compressed .ico files; use .png instead.
+    if sys.platform == "win32":
+        tmp = tempfile.NamedTemporaryFile(suffix=".ico", delete=False)
+        tmp.close()
+        images[0].save(tmp.name, format="ICO", append_images=images[1:],
+                       sizes=[(s, s) for s in sizes])
+    else:
+        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        tmp.close()
+        images[-1].save(tmp.name, format="PNG")  # use the largest size (256px)
     return tmp.name
 
 

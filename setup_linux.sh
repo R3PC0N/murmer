@@ -43,6 +43,16 @@ else
     WEBKIT_GIR="gir1.2-webkit2-4.0"
 fi
 
+# The two appindicator flavours conflict; pick whichever is already installed,
+# or prefer the ayatana variant on systems that have neither.
+if dpkg -l libappindicator3-1 2>/dev/null | grep -q '^ii'; then
+    APPIND_PKGS="libappindicator3-1 gir1.2-appindicator3-0.1"
+elif apt-cache show libayatana-appindicator3-1 &>/dev/null 2>&1; then
+    APPIND_PKGS="libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1"
+else
+    APPIND_PKGS="libappindicator3-1 gir1.2-appindicator3-0.1"
+fi
+
 sudo apt-get install -y \
     python3-venv \
     python3-tk \
@@ -50,10 +60,7 @@ sudo apt-get install -y \
     xdotool \
     xclip \
     libportaudio2 \
-    libappindicator3-1 \
-    gir1.2-appindicator3-0.1 \
-    libayatana-appindicator3-1 \
-    gir1.2-ayatanaappindicator3-0.1 \
+    $APPIND_PKGS \
     "$GI_DEV_PKG" \
     "$WEBKIT_PKG" \
     "$WEBKIT_GIR" \
@@ -131,8 +138,21 @@ if command -v nvidia-smi &> /dev/null; then
     echo "  Murmur will use CUDA by default (large-v3 model)."
     echo "  Make sure the CUDA libraries are installed for faster-whisper."
 else
-    echo -e "${YELLOW}→ No NVIDIA GPU detected — Murmur will run on CPU.${NC}"
-    echo "  Consider using the medium model in Settings → Transcription."
+    echo -e "${YELLOW}→ No NVIDIA GPU detected — writing CPU settings (medium model, int8).${NC}"
+    # Write CPU-safe defaults to settings.json so the app doesn't try to load CUDA.
+    if [ ! -f settings.json ]; then
+        cat > settings.json << 'SETTINGS_EOF'
+{
+  "WHISPER_MODEL": "medium",
+  "WHISPER_DEVICE": "cpu",
+  "WHISPER_COMPUTE_TYPE": "int8"
+}
+SETTINGS_EOF
+        echo -e "${GREEN}✓ settings.json written with CPU defaults.${NC}"
+    else
+        echo "  settings.json already exists — not overwriting."
+        echo "  If Murmur fails to start, set WHISPER_DEVICE=cpu, WHISPER_MODEL=medium in Settings."
+    fi
 fi
 
 # ── Launch script ─────────────────────────────────────────────────────────────
