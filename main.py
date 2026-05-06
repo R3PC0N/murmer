@@ -396,17 +396,17 @@ def _stop_whisper_server():
 
 def _open_settings():
     if settings_win:
-        settings_win.open()
+        _gtk_dispatch(settings_win.open)
 
 
 def _open_log():
     if log_win:
-        log_win.open()
+        _gtk_dispatch(log_win.open)
 
 
 def _open_server_manager():
     if server_manager_win:
-        server_manager_win.open()
+        _gtk_dispatch(server_manager_win.open)
 
 
 def _on_settings_saved(updates: dict):
