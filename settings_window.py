@@ -130,5 +130,18 @@ class SettingsWindow:
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
 
+        if sys.platform != "win32":
+            # pywebview schedules the actual GTK BrowserView creation via
+            # GLib.idle_add internally. Flush the context so those idles fire
+            # now, then explicitly show the window.
+            from gi.repository import GLib
+            for _ in range(20):
+                GLib.MainContext.default().iteration(False)
+            try:
+                self._window.show()
+                print("[DBG] show() called after flush", flush=True)
+            except Exception as e:
+                print(f"[DBG] show() exception: {e}", flush=True)
+
     def _on_closed(self):
         self._window = None

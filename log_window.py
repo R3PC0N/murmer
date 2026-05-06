@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import sys
+
 import webview
 
 import logger
@@ -42,6 +44,15 @@ class LogWindow:
         )
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
+
+        if sys.platform != "win32":
+            from gi.repository import GLib
+            for _ in range(20):
+                GLib.MainContext.default().iteration(False)
+            try:
+                self._window.show()
+            except Exception:
+                pass
 
     def _on_closed(self):
         self._window = None
