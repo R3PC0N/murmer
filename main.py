@@ -528,23 +528,34 @@ def _background_init():
         _icon.run_detached()
     else:
         # On Linux, webview already runs Gtk.main() on the main thread.
-        # Calling _icon.run() in a second thread starts a competing Gtk.main()
-        # on the same GLib context, causing threading conflicts that silently
-        # swallow tray-menu callbacks.
-        # Fix: schedule _icon.run() on the GTK main thread via idle_add, but
-        # stub out Gtk.main() for the duration so pystray does its setup
-        # without starting a second event loop.
+        # Calling _icon.run() in a thread starts a competing Gtk.main() on the
+        # same GLib context, causing threading conflicts.
+        # Fix: run _icon.run() on the GTK main thread via idle_add with Gtk.main
+        # and Gtk.main_quit both stubbed so pystray does its AppIndicator setup
+        # without touching the event loop. After run() returns, pystray's cleanup
+        # sets _running=False and shuts down its executor; we restore both so
+        # menu callbacks keep working.
+        import concurrent.futures
         from gi.repository import GLib
 
         def _init_pystray_on_gtk_thread():
             try:
                 from gi.repository import Gtk
-                _orig = Gtk.main
-                Gtk.main = lambda: None  # prevent pystray from starting its own loop
+                _orig_main = Gtk.main
+                _orig_quit = Gtk.main_quit
+                Gtk.main = lambda: None
+                Gtk.main_quit = lambda: None
                 try:
                     _icon.run()
                 finally:
-                    Gtk.main = _orig
+                    Gtk.main = _orig_main
+                    Gtk.main_quit = _orig_quit
+                # Restore state pystray's cleanup tore down.
+                _icon._running = True
+                _icon._executor = concurrent.futures.ThreadPoolExecutor()
+                if hasattr(_icon, "_indicator"):
+                    from gi.repository import AppIndicator3
+                    _icon._indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
             except Exception as e:
                 logger.log(f"Tray icon init error: {e}", level="ERROR")
             return False  # idle_add: run once
