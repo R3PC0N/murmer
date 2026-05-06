@@ -100,11 +100,15 @@ class SettingsWindow:
         self._window: webview.Window | None = None
 
     def open(self):
+        import threading
+        print(f"[DBG] SettingsWindow.open() thread={threading.current_thread().name} _window={self._window}", flush=True)
         if self._window:
             try:
                 self._window.show()
+                print("[DBG] show() called on existing window", flush=True)
                 return
-            except Exception:
+            except Exception as e:
+                print(f"[DBG] show() failed: {e}", flush=True)
                 self._window = None
 
         api = SettingsAPI(on_save=self._on_save, on_restart=self._on_restart)
@@ -117,6 +121,7 @@ class SettingsWindow:
             min_size=(600, 420),
             background_color="#232326",
         )
+        print(f"[DBG] create_window returned: {self._window}", flush=True)
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
 

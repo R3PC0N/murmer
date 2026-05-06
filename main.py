@@ -391,9 +391,9 @@ def _stop_whisper_server():
 # ── Window openers ────────────────────────────────────────────────────────────
 
 def _open_settings():
-    # Called from pystray's executor thread (not MainThread) — pywebview's
-    # create_window() detects this and immediately calls guilib.create_window(),
-    # creating the GTK BrowserView without needing GLib.idle_add dispatch.
+    import threading
+    import webview as _wv
+    print(f"[DBG] _open_settings thread={threading.current_thread().name} guilib={_wv.guilib}", flush=True)
     if settings_win:
         settings_win.open()
 
