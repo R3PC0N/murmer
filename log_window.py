@@ -23,8 +23,14 @@ class LogWindow:
     def __init__(self):
         self._window: webview.Window | None = None
 
-    def create(self):
-        """Pre-create the window hidden before webview.start(). Call once at startup."""
+    def open(self):
+        if self._window:
+            try:
+                self._window.show()
+                return
+            except Exception:
+                self._window = None
+
         api = LogAPI()
         self._window = webview.create_window(
             "Murmur Activity",
@@ -33,30 +39,9 @@ class LogWindow:
             width=580,
             height=420,
             background_color="#232326",
-            hidden=True,
         )
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
-        self._window.events.closing += self._on_closing
+        self._window.events.closed += self._on_closed
 
-    def _on_closing(self):
-        self._window.hide()
-        return False  # Cancel the close; keep window alive for reuse
-
-    def open(self):
-        if self._window:
-            self._window.hidden = False
-            self._window.show()
-            if sys.platform != "win32":
-                from gi.repository import GLib
-                uid = self._window.uid
-                def _force_show():
-                    try:
-                        from webview.platforms.gtk import BrowserView
-                        view = BrowserView.instances.get(uid)
-                        if view:
-                            view.window.show_all()
-                            view.window.present()
-                    except Exception:
-                        pass
-                    return False
-                GLib.idle_add(_force_show)
+    def _on_closed(self):
+        self._window = None

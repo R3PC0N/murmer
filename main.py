@@ -391,18 +391,21 @@ def _stop_whisper_server():
 # ── Window openers ────────────────────────────────────────────────────────────
 
 def _open_settings():
+    # Called from pystray's executor thread (not MainThread) — pywebview's
+    # create_window() detects this and immediately calls guilib.create_window(),
+    # creating the GTK BrowserView without needing GLib.idle_add dispatch.
     if settings_win:
-        _gtk_dispatch(settings_win.open)
+        settings_win.open()
 
 
 def _open_log():
     if log_win:
-        _gtk_dispatch(log_win.open)
+        log_win.open()
 
 
 def _open_server_manager():
     if server_manager_win:
-        _gtk_dispatch(server_manager_win.open)
+        server_manager_win.open()
 
 
 def _on_settings_saved(updates: dict):
@@ -597,14 +600,6 @@ def main():
 
     splash = SplashScreen()
     splash.create()
-
-    # Pre-create secondary windows as hidden so pywebview fully initialises them
-    # together with the splash window before the GTK event loop starts.
-    # On Linux this is required: creating windows after webview.start() is
-    # unreliable when pystray is also running its own GLib loop.
-    settings_win.create()
-    log_win.create()
-    server_manager_win.create()
 
     _start_overlay_thread()
 
