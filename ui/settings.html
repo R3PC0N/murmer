@@ -32,7 +32,31 @@
     --radius-md:    7px;
     --font:         'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
     --mono:         'IBM Plex Mono', 'Consolas', monospace;
+    color-scheme: light dark;
   }
+
+  [data-theme="light"] {
+    --bg-base:      oklch(95% 0.005 60);
+    --bg-surface:   oklch(98% 0.003 60);
+    --bg-raised:    oklch(92% 0.007 60);
+    --bg-hover:     oklch(89% 0.009 60);
+    --bg-input:     oklch(94% 0.005 60);
+    --border:       rgba(0,0,0,0.08);
+    --border-mid:   rgba(0,0,0,0.14);
+    --text-pri:     rgba(0,0,0,0.87);
+    --text-sec:     rgba(0,0,0,0.50);
+    --text-muted:   rgba(0,0,0,0.32);
+    --text-accent:  #8B5820;
+    --green:        oklch(38% 0.16 155);
+    --red:          oklch(42% 0.2 25);
+    --amber:        #8B5820;
+    color-scheme: light;
+  }
+
+  [data-theme="light"] .toggle-track.off { background: rgba(0,0,0,0.15); border-color: rgba(0,0,0,0.1); }
+  [data-theme="light"] .toggle-thumb { background: white; }
+  [data-theme="light"] .seg-btn.inactive { color: var(--text-sec); }
+  [data-theme="light"] select { background: var(--bg-input); color: var(--text-pri); }
 
   html, body {
     width: 100%; height: 100%;
@@ -305,6 +329,14 @@
   /* ── Capturing state ── */
   .capturing { color: var(--amber); font-style: italic; }
 </style>
+<script>
+  (function() {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    function apply(e) { document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark'); }
+    apply(mq);
+    mq.addEventListener('change', apply);
+  })();
+</script>
 </head>
 <body>
 <div class="layout">

@@ -20,11 +20,46 @@ from paster import paste_text
 from recorder import Recorder
 from settings_window import SettingsWindow
 from splash import SplashScreen
+from theme_utils import start_theme_watcher
 from transcriber import Transcriber
 
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+# ── Window icon (transparent background, amber bars) ─────────────────────────
+
+def _build_transparent_ico() -> str:
+    import tempfile
+    heights_ratio = [0.25, 0.45, 0.65, 0.85, 0.65, 0.45, 0.25]
+    sizes = [16, 32, 48, 256]
+    images = []
+    for size in sizes:
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        bar_w = max(2, int(size * 0.08))
+        gap   = max(1, int(size * 0.045))
+        n     = len(heights_ratio)
+        total_w = n * bar_w + (n - 1) * gap
+        sx    = (size - total_w) // 2
+        cy    = size // 2
+        inner_h = size * 0.72
+        bar_r = max(1, bar_w // 2)
+        for i, ratio in enumerate(heights_ratio):
+            h = max(2, int(inner_h * ratio))
+            x = sx + i * (bar_w + gap)
+            d.rounded_rectangle(
+                [x, cy - h // 2, x + bar_w - 1, cy + h // 2],
+                radius=bar_r, fill="#C8922A",
+            )
+        images.append(img)
+    tmp = tempfile.NamedTemporaryFile(suffix=".ico", delete=False)
+    tmp.close()
+    images[0].save(tmp.name, format="ICO", append_images=images[1:],
+                   sizes=[(s, s) for s in sizes])
+    return tmp.name
+
 
 # ── Audio feedback ────────────────────────────────────────────────────────────
 
@@ -89,9 +124,9 @@ def _load_cleaner():
     if config.AI_CLEANUP_ENABLED and config.ANTHROPIC_API_KEY:
         from cleaner import Cleaner
         cleaner = Cleaner()
-        logger.log("AI cleanup enabled (Claude Haiku).")
+        logger.log("AI cleanup enabled (Claude Haiku).", level="INFO")
     else:
-        logger.log("AI cleanup disabled.")
+        logger.log("AI cleanup disabled.", level="INFO")
 
 
 # ── Tray icon ─────────────────────────────────────────────────────────────────
@@ -99,15 +134,14 @@ def _load_cleaner():
 def _make_icon(recording=False, processing=False) -> Image.Image:
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([1, 1, 62, 62], radius=14, fill="#1a1a1e")
     if recording:
         color = "#D94040"
     elif processing:
-        color = "#D4A030"
+        color = "#C8922A"
     else:
-        color = "#8A8A8E"
-    heights = [10, 18, 28, 38, 28, 18, 10]
-    bar_w, gap = 5, 3
+        color = "#AEAEB2"
+    heights = [14, 24, 38, 52, 38, 24, 14]
+    bar_w, gap = 6, 3
     total_w = len(heights) * bar_w + (len(heights) - 1) * gap
     sx = (64 - total_w) // 2
     cy = 32
@@ -133,6 +167,7 @@ def _on_press():
     _update_icon()
     _beep(880, 80)
     recorder.start()
+    print("[DBG] recording started")
     if config.SHOW_OVERLAY and _overlay:
         _overlay.show()
 
@@ -146,7 +181,16 @@ def _on_release():
     if _overlay:
         _overlay.hide()
 
-    if audio is None or len(audio) < config.MIN_RECORDING_SAMPLES:
+    samples = len(audio) if audio is not None else 0
+    print(f"[DBG] recording stopped — {samples} samples")
+    if audio is None or samples == 0:
+        logger.log("No audio captured — check your microphone input in Settings → Audio.", level="ERROR")
+        _beep(220, 400)
+        _update_icon()
+        return
+    if samples < config.MIN_RECORDING_SAMPLES:
+        logger.log("Recording too short — hold the key a little longer.", level="ERROR")
+        _beep(440, 120)
         _update_icon()
         return
 
@@ -167,8 +211,11 @@ def _apply_corrections(text: str) -> str:
 def _process(audio):
     global _processing
     try:
+        print("[DBG] transcribing...")
         text, language = transcriber.transcribe(audio)
+        print(f"[DBG] transcribe result: {repr(text)}")
         if not text:
+            logger.log("Transcription returned empty result.", level="ERROR")
             return
         logger.log(f"Transcribed ({language}): {text}")
         text = _apply_corrections(text)
@@ -296,7 +343,7 @@ def _start_whisper_server():
         cwd=str(script.parent),
         creationflags=_NO_WINDOW,
     )
-    logger.log("Whisper Server gestart op poort 8765.")
+    logger.log("Whisper Server gestart op poort 8765.", level="OK")
     if _icon:
         _icon.update_menu()
 
@@ -319,7 +366,7 @@ def _stop_whisper_server():
         )
     else:
         subprocess.run(["pkill", "-f", "faster_whisper_server"], capture_output=True)
-    logger.log("Whisper Server gestopt.")
+    logger.log("Whisper Server gestopt.", level="OK")
     if _icon:
         _icon.update_menu()
 
@@ -346,8 +393,8 @@ def _on_settings_saved(updates: dict):
     if "PUSH_TO_TALK_KEY" in updates:
         _stop_hotkey_listener()
         threading.Thread(target=_keyboard_listener, daemon=True).start()
-        logger.log(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}")
-    logger.log("Settings saved.")
+        logger.log(f"Hotkey updated to: {config.PUSH_TO_TALK_KEY}", level="INFO")
+    logger.log("Settings saved.", level="INFO")
 
 
 # ── Restart / Quit ────────────────────────────────────────────────────────────
@@ -432,7 +479,7 @@ def _background_init():
     _load_cleaner()
 
     key = config.PUSH_TO_TALK_KEY.upper()
-    logger.log(f"Ready. Hold {key} to record, release to transcribe and paste.")
+    logger.log(f"Ready. Hold {key} to record, release to transcribe and paste.", level="INFO")
 
     menu = pystray.Menu(
         pystray.MenuItem("Murmur", None, enabled=False),
@@ -468,6 +515,14 @@ def _background_init():
     if splash:
         splash.hide()
 
+    def _get_open_windows():
+        wins = []
+        for w in [settings_win, log_win, server_manager_win]:
+            if w and w._window:
+                wins.append(w._window)
+        return wins
+    start_theme_watcher(_get_open_windows)
+
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -480,6 +535,9 @@ def main():
             _ct.cdll.LoadLibrary("libX11.so.6").XInitThreads()
         except Exception:
             pass
+
+    if sys.platform == "win32":
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("MurmurLabs.Murmur.1")
 
     _ensure_single_instance()
 
@@ -496,8 +554,10 @@ def main():
 
     _start_overlay_thread()
 
+    _icon_path = _build_transparent_ico()
     webview.start(
         func=lambda: threading.Thread(target=_background_init, daemon=True).start(),
+        icon=_icon_path,
         debug=False,
     )
 

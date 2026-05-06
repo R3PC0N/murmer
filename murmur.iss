@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define AppName      "Murmur"
-#define AppVersion   "1.1"
+#define AppVersion   "1.2"
 #define AppPublisher "R3PC0N"
 
 [Setup]
@@ -46,6 +46,11 @@ Source: "requirements.txt";    DestDir: "{app}"; Flags: ignoreversion
 Source: ".env.example"; DestDir: "{app}"; DestName: ".env.example"; Flags: ignoreversion
 Source: "murmur.ico";                    DestDir: "{app}"; Flags: ignoreversion
 Source: "server_manager_window.py";      DestDir: "{app}"; Flags: ignoreversion
+Source: "theme_utils.py";               DestDir: "{app}"; Flags: ignoreversion
+Source: "ui\settings.html";             DestDir: "{app}\ui"; Flags: ignoreversion
+Source: "ui\log.html";                  DestDir: "{app}\ui"; Flags: ignoreversion
+Source: "ui\server.html";               DestDir: "{app}\ui"; Flags: ignoreversion
+Source: "ui\splash.html";               DestDir: "{app}\ui"; Flags: ignoreversion
 Source: "server\faster_whisper_server.py"; DestDir: "{app}\server"; Flags: ignoreversion
 Source: "server\requirements.txt";      DestDir: "{app}\server"; Flags: ignoreversion
 Source: "server\.env.example";          DestDir: "{app}\server"; DestName: ".env.example"; Flags: ignoreversion

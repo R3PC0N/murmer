@@ -33,7 +33,7 @@ class Transcriber:
             device=config.WHISPER_DEVICE,
             compute_type=config.WHISPER_COMPUTE_TYPE,
         )
-        logger.log("Whisper model ready.")
+        logger.log("Whisper model ready.", level="OK")
 
     def transcribe(self, audio: np.ndarray) -> tuple[str, str]:
         if config.TRANSCRIPTION_MODE == "remote":

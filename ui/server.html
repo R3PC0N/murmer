@@ -31,7 +31,28 @@
     --radius-md:  7px;
     --font:       'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
     --mono:       'IBM Plex Mono', 'Consolas', monospace;
+    color-scheme: light dark;
   }
+
+  [data-theme="light"] {
+    --bg-base:    oklch(95% 0.005 60);
+    --bg-surface: oklch(98% 0.003 60);
+    --bg-raised:  oklch(92% 0.007 60);
+    --bg-hover:   oklch(89% 0.009 60);
+    --bg-input:   oklch(94% 0.005 60);
+    --border:     rgba(0,0,0,0.08);
+    --border-mid: rgba(0,0,0,0.14);
+    --text-pri:   rgba(0,0,0,0.87);
+    --text-sec:   rgba(0,0,0,0.50);
+    --text-muted: rgba(0,0,0,0.32);
+    --text-accent:#8B5820;
+    --green:      oklch(38% 0.16 155);
+    --red:        oklch(42% 0.2 25);
+    color-scheme: light;
+  }
+
+  [data-theme="light"] .toggle-track.off { background: rgba(0,0,0,0.15); border-color: rgba(0,0,0,0.1); }
+  [data-theme="light"] .toggle-thumb { background: white; }
 
   html, body {
     width: 100%; height: 100%;
@@ -272,6 +293,14 @@
     margin-bottom: 4px;
   }
 </style>
+<script>
+  (function() {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    function apply(e) { document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark'); }
+    apply(mq);
+    mq.addEventListener('change', apply);
+  })();
+</script>
 </head>
 <body>
 <div class="page">
@@ -279,7 +308,7 @@
   <!-- ── View: Installed (Windows & Linux) ── -->
   <div class="view active" id="view-installed">
     <div class="srv-header">
-      <div class="srv-title">Whisper Server</div>
+      <div class="srv-title">Murmur Server</div>
       <div class="status-row">
         <div class="status-dot stopped" id="status-dot"></div>
         <span class="status-text stopped" id="status-text">Stopped</span>
@@ -346,11 +375,11 @@
 
   <!-- ── View: Not installed (Windows) ── -->
   <div class="view" id="view-not-installed">
-    <div class="not-installed-title">Whisper Server</div>
+    <div class="not-installed-title">Murmur Server</div>
     <div class="not-installed-sub">Turn this PC into a transcription server</div>
 
     <div class="install-info">
-      <p>The Whisper Server lets other devices — like your laptop — use this PC's GPU for fast voice transcription.</p>
+      <p>The Murmur Server lets other devices — like your laptop — use this PC's GPU for fast voice transcription.</p>
       <p>How it works:</p>
       <p style="padding-left:12px">
         1. Install the server on this PC (one time)<br>
@@ -371,7 +400,7 @@
   <!-- ── View: Installing ── -->
   <div class="view" id="view-installing">
     <div style="padding-top: 40px;">
-      <div class="installing-title">Installing Whisper Server</div>
+      <div class="installing-title">Installing Murmur Server</div>
       <div class="installing-status" id="install-status">Creating virtual environment…</div>
       <div class="progress-track"><div class="progress-fill"></div></div>
       <p style="font-size:11.5px; color: var(--text-muted); text-align:center; margin-top:6px">
@@ -382,7 +411,7 @@
 
   <!-- ── View: Linux instructions (not installed) ── -->
   <div class="view" id="view-linux-setup">
-    <div class="not-installed-title">Whisper Server</div>
+    <div class="not-installed-title">Murmur Server</div>
     <div class="not-installed-sub">Turn this PC into a transcription server</div>
 
     <div class="step-title">1. Set up the server</div>

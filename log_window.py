@@ -3,6 +3,7 @@ from pathlib import Path
 import webview
 
 import logger
+from theme_utils import apply_title_bar_theme
 
 _UI = Path(__file__).parent / "ui" / "log.html"
 
@@ -32,13 +33,14 @@ class LogWindow:
 
         api = LogAPI()
         self._window = webview.create_window(
-            "Murmur — Activity",
+            "Murmur Activity",
             url=str(_UI),
             js_api=api,
             width=580,
             height=420,
             background_color="#232326",
         )
+        self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
 
     def _on_closed(self):

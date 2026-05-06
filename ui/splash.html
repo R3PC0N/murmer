@@ -7,8 +7,23 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg:         #1c1c1e;
+    --text-pri:   rgba(255,255,255,0.92);
+    --text-muted: rgba(255,255,255,0.4);
+    --track:      rgba(255,255,255,0.08);
+    color-scheme: light dark;
+  }
+  [data-theme="light"] {
+    --bg:         oklch(97% 0.005 60);
+    --text-pri:   rgba(0,0,0,0.87);
+    --text-muted: rgba(0,0,0,0.38);
+    --track:      rgba(0,0,0,0.10);
+    color-scheme: light;
+  }
+
   body {
-    background: #1c1c1e;
+    background: var(--bg);
     font-family: 'Segoe UI', system-ui, sans-serif;
     display: flex;
     align-items: center;
@@ -33,20 +48,42 @@
   }
 
   .logo-icon {
-    width: 40px;
-    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 36px;
+  }
+
+  .logo-icon .bar {
+    width: 4px;
+    border-radius: 3px;
+    background: #C8922A;
+    animation: wave 2s ease-in-out infinite;
+  }
+
+  .logo-icon .bar:nth-child(1) { height: 10px; animation-delay: 0.00s; }
+  .logo-icon .bar:nth-child(2) { height: 18px; animation-delay: 0.18s; }
+  .logo-icon .bar:nth-child(3) { height: 28px; animation-delay: 0.36s; }
+  .logo-icon .bar:nth-child(4) { height: 36px; animation-delay: 0.54s; }
+  .logo-icon .bar:nth-child(5) { height: 28px; animation-delay: 0.36s; }
+  .logo-icon .bar:nth-child(6) { height: 18px; animation-delay: 0.18s; }
+  .logo-icon .bar:nth-child(7) { height: 10px; animation-delay: 0.00s; }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+    50%       { transform: scaleY(1);   opacity: 1;   }
   }
 
   .logo-text {
     font-size: 30px;
     font-weight: 700;
-    color: rgba(255,255,255,0.92);
+    color: var(--text-pri);
     letter-spacing: -0.02em;
   }
 
   .subtitle {
     font-size: 13px;
-    color: rgba(255,255,255,0.4);
+    color: var(--text-muted);
     margin-bottom: 28px;
     letter-spacing: 0.01em;
   }
@@ -54,7 +91,7 @@
   .bar-track {
     width: 220px;
     height: 3px;
-    background: rgba(255,255,255,0.08);
+    background: var(--track);
     border-radius: 99px;
     overflow: hidden;
   }
@@ -73,20 +110,27 @@
     100% { transform: translateX(350%); }
   }
 </style>
+<script>
+  (function() {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    function apply(e) { document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark'); }
+    apply(mq);
+    mq.addEventListener('change', apply);
+  })();
+</script>
 </head>
 <body>
 <div class="container">
   <div class="logo">
-    <svg class="logo-icon" viewBox="0 0 256 256" fill="none">
-      <rect x="8" y="8" width="240" height="240" rx="46" ry="46" fill="#232326"/>
-      <rect x="25" y="105" width="20" height="46" rx="10" fill="#C8922A"/>
-      <rect x="56" y="87" width="20" height="82" rx="10" fill="#C8922A"/>
-      <rect x="87" y="69" width="20" height="119" rx="10" fill="#C8922A"/>
-      <rect x="118" y="50" width="20" height="156" rx="10" fill="#C8922A"/>
-      <rect x="149" y="69" width="20" height="119" rx="10" fill="#C8922A"/>
-      <rect x="180" y="87" width="20" height="82" rx="10" fill="#C8922A"/>
-      <rect x="211" y="105" width="20" height="46" rx="10" fill="#C8922A"/>
-    </svg>
+    <div class="logo-icon">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+    </div>
     <span class="logo-text">Murmur</span>
   </div>
   <div class="subtitle" id="status">Loading speech model...</div>

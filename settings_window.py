@@ -7,6 +7,7 @@ import webview
 import autostart
 import config
 from recorder import device_available, get_device_names
+from theme_utils import apply_title_bar_theme
 
 _UI = Path(__file__).parent / "ui" / "settings.html"
 
@@ -108,7 +109,7 @@ class SettingsWindow:
 
         api = SettingsAPI(on_save=self._on_save, on_restart=self._on_restart)
         self._window = webview.create_window(
-            "Murmur — Settings",
+            "Murmur Settings",
             url=str(_UI),
             js_api=api,
             width=740,
@@ -116,6 +117,7 @@ class SettingsWindow:
             min_size=(600, 420),
             background_color="#232326",
         )
+        self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
 
     def _on_closed(self):

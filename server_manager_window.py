@@ -8,6 +8,7 @@ import webview
 
 import config
 import logger
+from theme_utils import apply_title_bar_theme
 
 _SERVER_DIR   = Path(__file__).parent / "server"
 _VENV_PYTHON  = _SERVER_DIR / "venv" / (
@@ -86,7 +87,7 @@ def _open_firewall_port():
              "-Verb RunAs -Wait"],
             creationflags=_NO_WINDOW,
         )
-        logger.log("Firewall rule added: port 8765 open for inbound connections.")
+        logger.log("Firewall rule added: port 8765 open for inbound connections.", level="OK")
     except Exception as e:
         logger.log(f"Firewall rule could not be added: {e}", level="ERROR")
 
@@ -126,7 +127,7 @@ class ServerAPI:
     def set_autostart(self, value: bool):
         config.save({"WHISPER_SERVER_AUTOSTART": value})
         state = "ingeschakeld" if value else "uitgeschakeld"
-        logger.log(f"Whisper Server autostart {state}.")
+        logger.log(f"Whisper Server autostart {state}.", level="INFO")
 
     def generate_key(self) -> dict:
         key = secrets.token_hex(32)
@@ -145,11 +146,11 @@ class ServerAPI:
                 _ENV_FILE.write_text("\n".join(new_lines), encoding="utf-8")
             else:
                 _ENV_FILE.write_text(f"MURMUR_API_KEY={key}\n", encoding="utf-8")
-            logger.log("Whisper Server API key generated and saved.")
+            logger.log("Whisper Server API key generated and saved.", level="OK")
             if self._get_server_running():
                 self._stop_server()
                 self._start_server()
-                logger.log("Whisper Server restarted with new API key.")
+                logger.log("Whisper Server restarted with new API key.", level="OK")
         except Exception as e:
             logger.log(f"API key save failed: {e}", level="ERROR")
         return self.get_state()
@@ -234,15 +235,16 @@ class ServerManagerWindow:
             stop_server=self._stop_server,
         )
         self._window = webview.create_window(
-            "Murmur — Whisper Server",
+            "Murmur Server",
             url=str(_UI),
             js_api=api,
             width=480,
-            height=540,
+            height=660,
             resizable=False,
             background_color="#232326",
         )
         self._window.events.loaded += lambda: api._set_window(self._window)
+        self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
 
     def _on_closed(self):
