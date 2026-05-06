@@ -391,21 +391,21 @@ def _stop_whisper_server():
 # ── Window openers ────────────────────────────────────────────────────────────
 
 def _open_settings():
-    import threading
-    import webview as _wv
-    print(f"[DBG] _open_settings thread={threading.current_thread().name} guilib={_wv.guilib}", flush=True)
+    # pystray fires menu callbacks on the GTK main thread (via the nested
+    # GLib.MainLoop). pywebview only creates a BrowserView when create_window()
+    # is called from a non-MainThread. Spawn a thread so the name check passes.
     if settings_win:
-        settings_win.open()
+        threading.Thread(target=settings_win.open, daemon=True).start()
 
 
 def _open_log():
     if log_win:
-        log_win.open()
+        threading.Thread(target=log_win.open, daemon=True).start()
 
 
 def _open_server_manager():
     if server_manager_win:
-        server_manager_win.open()
+        threading.Thread(target=server_manager_win.open, daemon=True).start()
 
 
 def _on_settings_saved(updates: dict):
