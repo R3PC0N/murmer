@@ -379,19 +379,29 @@ def _stop_whisper_server():
 
 # ── Window openers ────────────────────────────────────────────────────────────
 
+def _gui_call(fn):
+    # On Linux/GTK, pywebview requires window operations on the main GTK thread.
+    # Pystray callbacks fire in a separate thread, so we must dispatch via GLib.
+    if sys.platform != "win32":
+        from gi.repository import GLib
+        GLib.idle_add(fn)
+    else:
+        fn()
+
+
 def _open_settings():
     if settings_win:
-        settings_win.open()
+        _gui_call(settings_win.open)
 
 
 def _open_log():
     if log_win:
-        log_win.open()
+        _gui_call(log_win.open)
 
 
 def _open_server_manager():
     if server_manager_win:
-        server_manager_win.open()
+        _gui_call(server_manager_win.open)
 
 
 def _on_settings_saved(updates: dict):
