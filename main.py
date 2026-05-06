@@ -528,19 +528,26 @@ def _background_init():
         _icon.run_detached()
     else:
         # On Linux, webview already runs Gtk.main() on the main thread.
-        # Calling _icon.run() in a second thread would start a competing
-        # Gtk.main(), causing GTK threading conflicts that silently swallow
-        # tray-menu callbacks. Instead, schedule pystray's internal setup
-        # on the GTK main thread via idle_add — no second Gtk.main() needed.
+        # Calling _icon.run() in a second thread starts a competing Gtk.main()
+        # on the same GLib context, causing threading conflicts that silently
+        # swallow tray-menu callbacks.
+        # Fix: schedule _icon.run() on the GTK main thread via idle_add, but
+        # stub out Gtk.main() for the duration so pystray does its setup
+        # without starting a second event loop.
         from gi.repository import GLib
 
         def _init_pystray_on_gtk_thread():
             try:
-                _icon._create_icon()
-                _icon._mark_ready()
+                from gi.repository import Gtk
+                _orig = Gtk.main
+                Gtk.main = lambda: None  # prevent pystray from starting its own loop
+                try:
+                    _icon.run()
+                finally:
+                    Gtk.main = _orig
             except Exception as e:
                 logger.log(f"Tray icon init error: {e}", level="ERROR")
-            return False  # idle_add: run once, don't repeat
+            return False  # idle_add: run once
 
         GLib.idle_add(_init_pystray_on_gtk_thread)
 
