@@ -46,3 +46,17 @@ class LogWindow:
         if self._window:
             self._window.hidden = False
             self._window.show()
+            if sys.platform != "win32":
+                from gi.repository import GLib
+                uid = self._window.uid
+                def _force_show():
+                    try:
+                        from webview.platforms.gtk import BrowserView
+                        view = BrowserView.instances.get(uid)
+                        if view:
+                            view.window.show_all()
+                            view.window.present()
+                    except Exception:
+                        pass
+                    return False
+                GLib.idle_add(_force_show)

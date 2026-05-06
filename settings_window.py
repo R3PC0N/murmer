@@ -121,8 +121,23 @@ class SettingsWindow:
 
     def open(self):
         if self._window:
-            # pywebview checks gtk.main_level() in BrowserView.show(); in our
-            # pystray/GLib.MainLoop setup that returns 0, so it re-hides the
-            # window if pywebview_window.hidden is still True. Clear it first.
             self._window.hidden = False
             self._window.show()
+            if sys.platform != "win32":
+                # pywebview's normal show path (when Gtk.main() is active)
+                # schedules an extra idle show_all() + calls present() to bring
+                # the window to foreground. Replicate that here since we run
+                # pystray's GLib.MainLoop instead of Gtk.main().
+                from gi.repository import GLib
+                uid = self._window.uid
+                def _force_show():
+                    try:
+                        from webview.platforms.gtk import BrowserView
+                        view = BrowserView.instances.get(uid)
+                        if view:
+                            view.window.show_all()
+                            view.window.present()
+                    except Exception:
+                        pass
+                    return False
+                GLib.idle_add(_force_show)
