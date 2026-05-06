@@ -67,8 +67,12 @@ Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\main.py"""; Wor
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\venv"
+Type: filesandordirs; Name: "{app}\server\venv"
 Type: filesandordirs; Name: "{app}\__pycache__"
 Type: files;          Name: "{app}\settings.json"
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\server\venv"
 
 [Code]
 
