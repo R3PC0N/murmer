@@ -158,9 +158,24 @@ def _make_icon(recording=False, processing=False) -> Image.Image:
     return img
 
 
+def _gtk_dispatch(fn):
+    """Schedule fn on the GTK main thread. Required for all pystray/GTK calls
+    that originate from recording/hotkey threads on Linux."""
+    if sys.platform != "win32":
+        from gi.repository import GLib
+        GLib.idle_add(lambda: fn() or False)
+    else:
+        fn()
+
+
 def _update_icon():
-    if _icon:
-        _icon.icon = _make_icon(recording=_recording, processing=_processing)
+    if not _icon:
+        return
+    new_icon = _make_icon(recording=_recording, processing=_processing)
+    if sys.platform != "win32":
+        _gtk_dispatch(lambda: setattr(_icon, "icon", new_icon))
+    else:
+        _icon.icon = new_icon
 
 
 # ── Recording ─────────────────────────────────────────────────────────────────
@@ -351,7 +366,7 @@ def _start_whisper_server():
     )
     logger.log("Whisper Server gestart op poort 8765.", level="OK")
     if _icon:
-        _icon.update_menu()
+        _gtk_dispatch(_icon.update_menu)
 
 
 def _stop_whisper_server():
@@ -374,34 +389,24 @@ def _stop_whisper_server():
         subprocess.run(["pkill", "-f", "faster_whisper_server"], capture_output=True)
     logger.log("Whisper Server gestopt.", level="OK")
     if _icon:
-        _icon.update_menu()
+        _gtk_dispatch(_icon.update_menu)
 
 
 # ── Window openers ────────────────────────────────────────────────────────────
 
-def _gui_call(fn):
-    # On Linux/GTK, pywebview requires window operations on the main GTK thread.
-    # Pystray callbacks fire in a separate thread, so we must dispatch via GLib.
-    if sys.platform != "win32":
-        from gi.repository import GLib
-        GLib.idle_add(fn)
-    else:
-        fn()
-
-
 def _open_settings():
     if settings_win:
-        _gui_call(settings_win.open)
+        settings_win.open()
 
 
 def _open_log():
     if log_win:
-        _gui_call(log_win.open)
+        log_win.open()
 
 
 def _open_server_manager():
     if server_manager_win:
-        _gui_call(server_manager_win.open)
+        server_manager_win.open()
 
 
 def _on_settings_saved(updates: dict):
@@ -522,11 +527,22 @@ def _background_init():
     if sys.platform == "win32":
         _icon.run_detached()
     else:
-        def _run_pystray_linux():
-            from gi.repository import GLib
-            GLib.MainContext.default().push_thread_default()
-            _icon.run()
-        threading.Thread(target=_run_pystray_linux, daemon=True).start()
+        # On Linux, webview already runs Gtk.main() on the main thread.
+        # Calling _icon.run() in a second thread would start a competing
+        # Gtk.main(), causing GTK threading conflicts that silently swallow
+        # tray-menu callbacks. Instead, schedule pystray's internal setup
+        # on the GTK main thread via idle_add — no second Gtk.main() needed.
+        from gi.repository import GLib
+
+        def _init_pystray_on_gtk_thread():
+            try:
+                _icon._create_icon()
+                _icon._mark_ready()
+            except Exception as e:
+                logger.log(f"Tray icon init error: {e}", level="ERROR")
+            return False  # idle_add: run once, don't repeat
+
+        GLib.idle_add(_init_pystray_on_gtk_thread)
 
     if splash:
         splash.hide()
