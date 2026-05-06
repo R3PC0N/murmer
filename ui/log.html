@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Murmur — Activity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-base:    #1c1c1e;
+    --bg-surface: #232326;
+    --bg-raised:  #2a2a2d;
+    --bg-hover:   #34343a;
+    --bg-input:   #1a1a1c;
+    --border:     rgba(255,255,255,0.08);
+    --accent:     #C8922A;
+    --accent-dim: rgba(200,146,42,0.18);
+    --text-pri:   rgba(255,255,255,0.94);
+    --text-sec:   rgba(255,255,255,0.62);
+    --text-muted: rgba(255,255,255,0.42);
+    --text-accent:#E8B45A;
+    --green:      oklch(68% 0.16 155);
+    --red:        oklch(60% 0.2 25);
+    --amber:      #C8922A;
+    --radius-sm:  5px;
+    --radius-md:  7px;
+    --font:       'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --mono:       'IBM Plex Mono', 'Consolas', monospace;
+    color-scheme: light dark;
+  }
+
+  [data-theme="light"] {
+    --bg-base:    oklch(95% 0.005 60);
+    --bg-surface: oklch(98% 0.003 60);
+    --bg-raised:  oklch(92% 0.007 60);
+    --bg-hover:   oklch(89% 0.009 60);
+    --bg-input:   oklch(94% 0.005 60);
+    --border:     rgba(0,0,0,0.08);
+    --text-pri:   rgba(0,0,0,0.87);
+    --text-sec:   rgba(0,0,0,0.50);
+    --text-muted: rgba(0,0,0,0.32);
+    --text-accent:#8B5820;
+    --green:      oklch(38% 0.16 155);
+    --red:        oklch(42% 0.2 25);
+    --amber:      #8B5820;
+    color-scheme: light;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg-surface);
+    font-family: var(--font);
+    color: var(--text-pri);
+    overflow: hidden;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 18px 20px 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  .title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-pri);
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Segmented control ── */
+  .seg-ctrl {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px; gap: 2px;
+  }
+  .seg-btn {
+    padding: 5px 14px; border-radius: 4px; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 12.5px; font-weight: 500;
+    transition: all 0.12s;
+  }
+  .seg-btn.active   { background: var(--accent); color: white; }
+  .seg-btn.inactive { background: transparent; color: var(--text-sec); }
+  .seg-btn.inactive:hover { color: var(--text-pri); background: var(--bg-hover); }
+
+  /* ── Log area ── */
+  .log-area {
+    flex: 1;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow-y: auto;
+    padding: 12px 14px;
+    margin-bottom: 0;
+  }
+
+  .log-area::-webkit-scrollbar { width: 5px; }
+  .log-area::-webkit-scrollbar-track { background: transparent; }
+  .log-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+
+  .log-line {
+    display: flex;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    padding-bottom: 1px;
+  }
+
+  .log-time  { color: var(--text-muted); margin-right: 10px; flex-shrink: 0; }
+  .log-ok    { color: var(--green); }
+  .log-info  { color: var(--text-accent); }
+  .log-ready { color: var(--amber); }
+  .log-error { color: var(--red); }
+  .log-result{ color: var(--text-pri); }
+  .log-default { color: var(--text-sec); }
+
+  .log-empty {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    text-align: center;
+    margin-top: 40px;
+    font-family: var(--font);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    padding: 12px 0 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .btn-primary {
+    background: var(--accent); color: white;
+    border: none; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    padding: 8px 15px; cursor: pointer;
+    transition: opacity 0.12s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+
+  .btn-ghost {
+    background: var(--bg-raised); color: var(--text-sec);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    padding: 8px 15px; cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-ghost:hover { background: var(--bg-hover); color: var(--text-pri); }
+</style>
+<script>
+  (function() {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    function apply(e) { document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark'); }
+    apply(mq);
+    mq.addEventListener('change', apply);
+  })();
+</script>
+</head>
+<body>
+<div class="layout">
+
+  <div class="header">
+    <div class="title">Activity</div>
+    <div class="seg-ctrl">
+      <button class="seg-btn active"   onclick="setMode('compact')">Compact</button>
+      <button class="seg-btn inactive" onclick="setMode('debug')">Debug</button>
+    </div>
+  </div>
+
+  <div class="log-area" id="log-area">
+    <div class="log-empty" id="log-empty">No activity yet.</div>
+  </div>
+
+  <div class="footer">
+    <button class="btn-primary" onclick="openHistory()">Open history</button>
+    <button class="btn-ghost"   onclick="clearLog()">Clear</button>
+  </div>
+
+</div>
+
+<script>
+  let mode = 'compact';
+  let entries = [];
+
+  // ── Level filter ───────────────────────────────────────────────────────────
+  function shouldShow(level) {
+    if (mode === 'debug') return true;
+    return level === 'RESULT' || level === 'ERROR' || level === 'INFO' || level === 'OK';
+  }
+
+  function levelClass(level) {
+    switch (level) {
+      case 'RESULT': return 'log-result';
+      case 'ERROR':  return 'log-error';
+      case 'OK':     return 'log-ok';
+      case 'INFO':   return 'log-info';
+      case 'READY':  return 'log-ready';
+      default:       return 'log-default';
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderAll() {
+    const area = document.getElementById('log-area');
+    const empty = document.getElementById('log-empty');
+    area.innerHTML = '';
+    area.appendChild(empty);
+
+    const visible = entries.filter(e => shouldShow(e[1]));
+    empty.style.display = visible.length === 0 ? '' : 'none';
+
+    visible.forEach(([ts, level, msg]) => appendLine(area, ts, level, msg));
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function appendLine(area, ts, level, msg) {
+    const line = document.createElement('div');
+    line.className = 'log-line';
+
+    const time = document.createElement('span');
+    time.className = 'log-time';
+    time.textContent = `[${ts}]`;
+
+    const text = document.createElement('span');
+    text.className = levelClass(level);
+    if (level === 'ERROR') msg = '⚠ ' + msg;
+    text.textContent = msg;
+
+    line.appendChild(time);
+    line.appendChild(text);
+    area.appendChild(line);
+  }
+
+  // ── Mode toggle ────────────────────────────────────────────────────────────
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.seg-btn').forEach((btn, i) => {
+      const bm = i === 0 ? 'compact' : 'debug';
+      btn.classList.toggle('active', bm === m);
+      btn.classList.toggle('inactive', bm !== m);
+    });
+    renderAll();
+  }
+
+  // ── Push new entry from Python ─────────────────────────────────────────────
+  function appendEntry(ts, level, msg) {
+    entries.push([ts, level, msg]);
+    if (!shouldShow(level)) return;
+    const area = document.getElementById('log-area');
+    document.getElementById('log-empty').style.display = 'none';
+    appendLine(area, ts, level, msg);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  function clearLog() {
+    entries = [];
+    const area = document.getElementById('log-area');
+    area.innerHTML = '';
+    const empty = document.getElementById('log-empty');
+    empty.style.display = '';
+    empty.textContent = 'No activity yet.';
+    area.appendChild(empty);
+    if (window.pywebview) window.pywebview.api.clear_log();
+  }
+
+  function openHistory() {
+    if (window.pywebview) window.pywebview.api.open_history();
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  let lastCount = 0;
+
+  async function loadLog() {
+    if (!window.pywebview) return;
+    const buf = await window.pywebview.api.get_log();
+    entries = buf || [];
+    lastCount = entries.length;
+    renderAll();
+    poll();
+  }
+
+  async function poll() {
+    try {
+      if (!window.pywebview) return;
+      const buf = await window.pywebview.api.get_log();
+      if (buf && buf.length > lastCount) {
+        const newEntries = buf.slice(lastCount);
+        newEntries.forEach(e => {
+          entries.push(e);
+          if (shouldShow(e[1])) {
+            const area = document.getElementById('log-area');
+            document.getElementById('log-empty').style.display = 'none';
+            appendLine(area, e[0], e[1], e[2]);
+            area.scrollTop = area.scrollHeight;
+          }
+        });
+        lastCount = buf.length;
+      }
+    } catch (err) {
+      console.warn('poll error:', err);
+    }
+    setTimeout(poll, 600);
+  }
+
+  window.addEventListener('pywebviewready', loadLog);
+  if (window.pywebview) loadLog();
+</script>
+</body>
+</html>

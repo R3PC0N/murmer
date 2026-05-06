@@ -27,11 +27,20 @@ echo -e "${GREEN}✓ Python $PY_VERSION${NC}"
 echo ""
 echo "Installing system packages..."
 sudo apt-get update -qq
-# girepository dev package name changed in Ubuntu 24.04
+# Package names changed in Ubuntu 24.04
 if apt-cache show libgirepository-2.0-dev &>/dev/null 2>&1; then
     GI_DEV_PKG="libgirepository-2.0-dev"
 else
     GI_DEV_PKG="libgirepository1.0-dev"
+fi
+
+# WebKitGTK package name changed in Ubuntu 24.04 (4.0 → 4.1)
+if apt-cache show libwebkit2gtk-4.1-dev &>/dev/null 2>&1; then
+    WEBKIT_PKG="libwebkit2gtk-4.1-dev"
+    WEBKIT_GIR="gir1.2-webkit2-4.1"
+else
+    WEBKIT_PKG="libwebkit2gtk-4.0-dev"
+    WEBKIT_GIR="gir1.2-webkit2-4.0"
 fi
 
 sudo apt-get install -y \
@@ -46,6 +55,8 @@ sudo apt-get install -y \
     libayatana-appindicator3-1 \
     gir1.2-ayatanaappindicator3-0.1 \
     "$GI_DEV_PKG" \
+    "$WEBKIT_PKG" \
+    "$WEBKIT_GIR" \
     libcairo2-dev \
     gnome-shell-extension-appindicator
 
