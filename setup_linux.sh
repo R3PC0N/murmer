@@ -57,6 +57,8 @@ sudo apt-get install -y \
     python3-venv \
     python3-tk \
     python3-dev \
+    python3-gi \
+    python3-gi-cairo \
     xdotool \
     xclip \
     libportaudio2 \
@@ -72,14 +74,16 @@ echo -e "${GREEN}✓ System packages installed${NC}"
 # ── Virtual environment ───────────────────────────────────────────────────────
 echo ""
 echo "Creating virtual environment..."
-python3 -m venv venv
+# --system-site-packages lets the venv use the system python3-gi, which has
+# proper access to system GI typelibs (AppIndicator3, etc). A pip-built
+# PyGObject cannot reliably find them.
+python3 -m venv venv --system-site-packages
 echo -e "${GREEN}✓ venv created${NC}"
 
 # ── Python packages ───────────────────────────────────────────────────────────
 echo ""
 echo "Installing Python packages (this may take a minute)..."
 venv/bin/pip install --upgrade pip --quiet
-venv/bin/pip install PyGObject --quiet
 venv/bin/pip install -r requirements.txt --quiet
 echo -e "${GREEN}✓ Python packages installed${NC}"
 
