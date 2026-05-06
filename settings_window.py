@@ -100,23 +100,33 @@ class SettingsWindow:
         self._window: webview.Window | None = None
 
     def open(self):
+        import threading
+        print(f"[DBG] SettingsWindow.open() called, thread={threading.current_thread().name}, "
+              f"webview.windows={webview.windows}", flush=True)
         if self._window:
             try:
+                print("[DBG] showing existing window", flush=True)
                 self._window.show()
                 return
-            except Exception:
+            except Exception as e:
+                print(f"[DBG] show() failed: {e}", flush=True)
                 self._window = None
 
         api = SettingsAPI(on_save=self._on_save, on_restart=self._on_restart)
-        self._window = webview.create_window(
-            "Murmur Settings",
-            url=str(_UI),
-            js_api=api,
-            width=740,
-            height=540,
-            min_size=(600, 420),
-            background_color="#232326",
-        )
+        try:
+            self._window = webview.create_window(
+                "Murmur Settings",
+                url=str(_UI),
+                js_api=api,
+                width=740,
+                height=540,
+                min_size=(600, 420),
+                background_color="#232326",
+            )
+            print(f"[DBG] create_window returned: {self._window}", flush=True)
+        except Exception as e:
+            print(f"[DBG] create_window exception: {e}", flush=True)
+            return
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         self._window.events.closed += self._on_closed
 
