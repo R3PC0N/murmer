@@ -44,4 +44,5 @@ class LogWindow:
 
     def open(self):
         if self._window:
+            self._window.hidden = False
             self._window.show()

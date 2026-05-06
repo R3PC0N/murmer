@@ -121,4 +121,8 @@ class SettingsWindow:
 
     def open(self):
         if self._window:
+            # pywebview checks gtk.main_level() in BrowserView.show(); in our
+            # pystray/GLib.MainLoop setup that returns 0, so it re-hides the
+            # window if pywebview_window.hidden is still True. Clear it first.
+            self._window.hidden = False
             self._window.show()
