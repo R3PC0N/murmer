@@ -391,9 +391,6 @@ def _stop_whisper_server():
 # ── Window openers ────────────────────────────────────────────────────────────
 
 def _open_settings():
-    # pystray fires menu callbacks on the GTK main thread (via the nested
-    # GLib.MainLoop). pywebview only creates a BrowserView when create_window()
-    # is called from a non-MainThread. Spawn a thread so the name check passes.
     if settings_win:
         threading.Thread(target=settings_win.open, daemon=True).start()
 
