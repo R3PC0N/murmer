@@ -220,16 +220,11 @@ class ServerManagerWindow:
         self._start_server = start_server
         self._stop_server = stop_server
         self._window: webview.Window | None = None
+        self._api: ServerAPI | None = None
 
-    def open(self):
-        if self._window:
-            try:
-                self._window.show()
-                return
-            except Exception:
-                self._window = None
-
-        api = ServerAPI(
+    def create(self):
+        """Pre-create the window hidden before webview.start(). Call once at startup."""
+        self._api = ServerAPI(
             get_server_running=self._get_server_running,
             start_server=self._start_server,
             stop_server=self._stop_server,
@@ -237,24 +232,21 @@ class ServerManagerWindow:
         self._window = webview.create_window(
             "Murmur Server",
             url=str(_UI),
-            js_api=api,
+            js_api=self._api,
             width=480,
             height=660,
             resizable=False,
             background_color="#232326",
+            hidden=True,
         )
-        self._window.events.loaded += lambda: api._set_window(self._window)
+        self._window.events.loaded += lambda: self._api._set_window(self._window)
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
-        self._window.events.closed += self._on_closed
+        self._window.events.closing += self._on_closing
 
-        if sys.platform != "win32":
-            from gi.repository import GLib
-            for _ in range(20):
-                GLib.MainContext.default().iteration(False)
-            try:
-                self._window.show()
-            except Exception:
-                pass
+    def _on_closing(self):
+        self._window.hide()
+        return False  # Cancel the close; keep window alive for reuse
 
-    def _on_closed(self):
-        self._window = None
+    def open(self):
+        if self._window:
+            self._window.show()

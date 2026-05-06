@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import sys
-
 import webview
 
 import logger
@@ -25,14 +23,8 @@ class LogWindow:
     def __init__(self):
         self._window: webview.Window | None = None
 
-    def open(self):
-        if self._window:
-            try:
-                self._window.show()
-                return
-            except Exception:
-                self._window = None
-
+    def create(self):
+        """Pre-create the window hidden before webview.start(). Call once at startup."""
         api = LogAPI()
         self._window = webview.create_window(
             "Murmur Activity",
@@ -41,18 +33,15 @@ class LogWindow:
             width=580,
             height=420,
             background_color="#232326",
+            hidden=True,
         )
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
-        self._window.events.closed += self._on_closed
+        self._window.events.closing += self._on_closing
 
-        if sys.platform != "win32":
-            from gi.repository import GLib
-            for _ in range(20):
-                GLib.MainContext.default().iteration(False)
-            try:
-                self._window.show()
-            except Exception:
-                pass
+    def _on_closing(self):
+        self._window.hide()
+        return False  # Cancel the close; keep window alive for reuse
 
-    def _on_closed(self):
-        self._window = None
+    def open(self):
+        if self._window:
+            self._window.show()

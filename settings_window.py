@@ -99,49 +99,26 @@ class SettingsWindow:
         self._on_restart = on_restart
         self._window: webview.Window | None = None
 
-    def open(self):
-        import threading
-        print(f"[DBG] SettingsWindow.open() called, thread={threading.current_thread().name}, "
-              f"webview.windows={webview.windows}", flush=True)
-        if self._window:
-            try:
-                print("[DBG] showing existing window", flush=True)
-                self._window.show()
-                return
-            except Exception as e:
-                print(f"[DBG] show() failed: {e}", flush=True)
-                self._window = None
-
+    def create(self):
+        """Pre-create the window hidden before webview.start(). Call once at startup."""
         api = SettingsAPI(on_save=self._on_save, on_restart=self._on_restart)
-        try:
-            self._window = webview.create_window(
-                "Murmur Settings",
-                url=str(_UI),
-                js_api=api,
-                width=740,
-                height=540,
-                min_size=(600, 420),
-                background_color="#232326",
-            )
-            print(f"[DBG] create_window returned: {self._window}", flush=True)
-        except Exception as e:
-            print(f"[DBG] create_window exception: {e}", flush=True)
-            return
+        self._window = webview.create_window(
+            "Murmur Settings",
+            url=str(_UI),
+            js_api=api,
+            width=740,
+            height=540,
+            min_size=(600, 420),
+            background_color="#232326",
+            hidden=True,
+        )
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
-        self._window.events.closed += self._on_closed
+        self._window.events.closing += self._on_closing
 
-        if sys.platform != "win32":
-            # pywebview schedules the actual GTK BrowserView creation via
-            # GLib.idle_add internally. Flush the context so those idles fire
-            # now, then explicitly show the window.
-            from gi.repository import GLib
-            for _ in range(20):
-                GLib.MainContext.default().iteration(False)
-            try:
-                self._window.show()
-                print("[DBG] show() called after flush", flush=True)
-            except Exception as e:
-                print(f"[DBG] show() exception: {e}", flush=True)
+    def _on_closing(self):
+        self._window.hide()
+        return False  # Cancel the close; keep window alive for reuse
 
-    def _on_closed(self):
-        self._window = None
+    def open(self):
+        if self._window:
+            self._window.show()
