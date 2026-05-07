@@ -2,9 +2,8 @@
 <resources>
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@android:color/black</item>
-        <!-- Android 12+ splash screen: light background + amber waveform icon -->
+        <!-- Android 12+ splash screen: solid light background, no icon -->
         <item name="android:windowSplashScreenBackground">#f2f2f7</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@android:color/black</item>
