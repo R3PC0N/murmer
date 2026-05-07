@@ -12,19 +12,25 @@ import '../services/storage_service.dart';
 
 enum _MicState { idle, recording, processing, success, error }
 
-// ── Design tokens ──────────────────────────────────────────────────────────
-const _bg            = Color(0xFF1C1C1E);  // matches app background
-const _borderIdle    = Color(0xFF48484A);  // iOS system separator grey
-const _borderRec     = Color(0xFFFF3B30);  // red — semantic, unchanged
-const _borderProc    = Color(0xFFC8922A);  // amber — matches logo
-const _borderSuccess = Color(0xFF34C759);  // green — semantic, unchanged
-const _borderError   = Color(0xFFFF3B30);  // red — semantic, unchanged
+// ── Design tokens — Dark (default) ────────────────────────────────────────
+const _bgDark         = Color(0xFF1C1C1E);  // iOS-grey dark
+const _borderIdleDark = Color(0xFF48484A);  // iOS system separator grey
+const _iconIdleDark   = Color(0xFF8E8E93);  // iOS system grey (muted)
+const _accentDark     = Color(0xFFC8922A);  // amber
 
-const _iconIdle    = Color(0xFF8E8E93);  // iOS system grey (muted)
-const _iconRec     = Color(0xFFFF3B30);  // red — semantic, unchanged
-const _iconProc    = Color(0xFFC8922A);  // amber — matches logo
-const _iconSuccess = Color(0xFF34C759);  // green — semantic, unchanged
-const _iconError   = Color(0xFFFF3B30);  // red — semantic, unchanged
+// ── Design tokens — Light ─────────────────────────────────────────────────
+const _bgLight         = Color(0xFFFFFFFF);  // white card
+const _borderIdleLight = Color(0xFFC6C6C8);  // --border light
+const _iconIdleLight   = Color(0xFF6C6C70);  // --muted light
+const _accentLight     = Color(0xFFA87520);  // darker amber for contrast on white
+
+// ── Semantic colours (same in both themes) ────────────────────────────────
+const _borderRec     = Color(0xFFFF3B30);  // red — semantic
+const _borderSuccess = Color(0xFF34C759);  // green — semantic
+const _borderError   = Color(0xFFFF3B30);  // red — semantic
+const _iconRec       = Color(0xFFFF3B30);  // red — semantic
+const _iconSuccess   = Color(0xFF34C759);  // green — semantic
+const _iconError     = Color(0xFFFF3B30);  // red — semantic
 
 const _size   = 68.0;
 const _radius = 16.0;
@@ -37,7 +43,7 @@ class MicButtonOverlay extends StatefulWidget {
 }
 
 class _MicButtonOverlayState extends State<MicButtonOverlay>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _audio   = AudioService();
   final _whisper = WhisperService();
   final _storage = StorageService.instance;
@@ -53,6 +59,7 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initStorage();
 
     _animCtrl = AnimationController(
@@ -75,10 +82,15 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animCtrl.dispose();
     _audio.dispose();
     super.dispose();
   }
+
+  // Rebuild the overlay when the system switches between light and dark mode.
+  @override
+  void didChangePlatformBrightness() => setState(() {});
 
   // ── Tap ──────────────────────────────────────────────────────────────────
 
@@ -187,18 +199,26 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
   }
 
   Widget _buildButton() {
+    // Pick palette based on system brightness (works without MaterialApp context).
+    final isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness
+        == Brightness.dark;
+    final bg         = isDark ? _bgDark         : _bgLight;
+    final borderIdle = isDark ? _borderIdleDark  : _borderIdleLight;
+    final iconIdle   = isDark ? _iconIdleDark    : _iconIdleLight;
+    final accent     = isDark ? _accentDark      : _accentLight;
+
     final Color borderColor = switch (_state) {
-      _MicState.idle       => _borderIdle,
+      _MicState.idle       => borderIdle,
       _MicState.recording  => _borderRec.withOpacity(_pulseAnim.value),
-      _MicState.processing => _borderProc,
+      _MicState.processing => accent,
       _MicState.success    => _borderSuccess,
       _MicState.error      => _borderError,
     };
 
     final Color iconColor = switch (_state) {
-      _MicState.idle       => _iconIdle,
+      _MicState.idle       => iconIdle,
       _MicState.recording  => _iconRec,
-      _MicState.processing => _iconProc,
+      _MicState.processing => accent,
       _MicState.success    => _iconSuccess,
       _MicState.error      => _iconError,
     };
@@ -208,7 +228,7 @@ class _MicButtonOverlayState extends State<MicButtonOverlay>
       width: _size,
       height: _size,
       decoration: BoxDecoration(
-        color: _bg,
+        color: bg,
         borderRadius: BorderRadius.circular(_radius),
         border: Border.all(color: borderColor, width: 1.5),
       ),

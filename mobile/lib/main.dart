@@ -37,7 +37,9 @@ class MurmurApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Murmur',
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
       home: const HomeScreen(),
     );
