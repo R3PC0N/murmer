@@ -601,17 +601,16 @@ def main():
     _start_overlay_thread()
 
     _icon_path = _build_transparent_ico()
-    if sys.platform != "win32":
-        try:
-            from gi.repository import Gtk
-            Gtk.Window.set_default_icon_from_file(_icon_path)
-        except Exception:
-            pass
-    webview.start(
-        func=lambda: threading.Thread(target=_background_init, daemon=True).start(),
-        icon=_icon_path,
-        debug=False,
-    )
+
+    def _on_start():
+        if sys.platform != "win32":
+            from gi.repository import GLib, Gtk
+            GLib.idle_add(
+                lambda: Gtk.Window.set_default_icon_from_file(_icon_path) or False
+            )
+        threading.Thread(target=_background_init, daemon=True).start()
+
+    webview.start(func=_on_start, icon=_icon_path, debug=False)
 
 
 if __name__ == "__main__":
