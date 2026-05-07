@@ -54,6 +54,7 @@ else
 fi
 
 sudo apt-get install -y \
+    build-essential \
     python3-venv \
     python3-tk \
     python3-dev \
