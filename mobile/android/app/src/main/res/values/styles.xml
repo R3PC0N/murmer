@@ -2,8 +2,10 @@
 <resources>
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@android:color/black</item>
-        <!-- Android 12+ splash screen: solid light background, no icon -->
+        <!-- Android 12+ splash screen: solid light background, transparent icon
+             (empty drawable overrides the default launcher icon fallback) -->
         <item name="android:windowSplashScreenBackground">#f2f2f7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_empty</item>
     </style>
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@android:color/black</item>
