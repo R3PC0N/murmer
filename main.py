@@ -570,6 +570,38 @@ def _background_init():
     start_theme_watcher(_get_open_windows)
 
 
+# ── Linux app entry (dock icon) ───────────────────────────────────────────────
+
+def _install_linux_app_entry():
+    import shutil
+    from gi.repository import GLib
+    GLib.set_prgname("murmur")
+    GLib.set_application_name("Murmur")
+
+    app_dir = Path(__file__).parent
+    icon_src = app_dir / "murmur.svg"
+
+    icon_dir = Path.home() / ".local/share/icons/hicolor/scalable/apps"
+    icon_dir.mkdir(parents=True, exist_ok=True)
+    icon_dst = icon_dir / "murmur.svg"
+    if icon_src.exists():
+        shutil.copy(icon_src, icon_dst)
+
+    desktop_dir = Path.home() / ".local/share/applications"
+    desktop_dir.mkdir(parents=True, exist_ok=True)
+    script = str(Path(__file__).resolve())
+    (desktop_dir / "murmur.desktop").write_text(
+        "[Desktop Entry]\n"
+        "Name=Murmur\n"
+        "Type=Application\n"
+        f"Exec=\"{sys.executable}\" \"{script}\"\n"
+        "Icon=murmur\n"
+        "StartupWMClass=murmur\n"
+        "NoDisplay=true\n",
+        encoding="utf-8",
+    )
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
@@ -581,6 +613,7 @@ def main():
             _ct.cdll.LoadLibrary("libX11.so.6").XInitThreads()
         except Exception:
             pass
+        _install_linux_app_entry()
 
     if sys.platform == "win32":
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("MurmurLabs.Murmur.1")
