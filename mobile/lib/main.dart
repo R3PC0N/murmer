@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'app_theme.dart';
 import 'overlay/mic_button_overlay.dart';
-import 'screens/splash_screen.dart';
+import 'screens/home_screen.dart';
 import 'services/storage_service.dart';
 
 @pragma('vm:entry-point')
@@ -41,7 +41,7 @@ class MurmurApp extends StatelessWidget {
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
+      home: const HomeScreen(),
     );
   }
 }

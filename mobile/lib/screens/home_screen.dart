@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
@@ -25,7 +26,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final _storage = StorageService.instance;
   final _whisper = WhisperService();
 
@@ -38,11 +40,25 @@ class _HomeScreenState extends State<HomeScreen> {
   _ServerStatus _serverStatus = _ServerStatus.unknown;
   bool _accessibilityEnabled = false;
 
+  // Drives the waveform animation on the overlay toggle button.
+  // Always repeating; speed=0 (static bars) when overlay is off.
+  late final AnimationController _waveCtrl;
+
   @override
   void initState() {
     super.initState();
+    _waveCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
     _load();
     _checkBootAutoStart();
+  }
+
+  @override
+  void dispose() {
+    _waveCtrl.dispose();
+    super.dispose();
   }
 
   /// If the app was launched by BootReceiver, start the overlay immediately
@@ -261,10 +277,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             : [],
                       ),
                       child: Center(
-                        child: _WaveformIcon(
-                          color: _overlayActive
-                              ? cs.primary
-                              : cs.onSurface.withOpacity(0.4),
+                        child: AnimatedBuilder(
+                          animation: _waveCtrl,
+                          builder: (_, __) => _WaveformIcon(
+                            color: _overlayActive
+                                ? cs.primary
+                                : cs.onSurface.withOpacity(0.4),
+                            phase: _waveCtrl.value,
+                            animate: _overlayActive,
+                          ),
                         ),
                       ),
                     ),
@@ -455,43 +476,72 @@ class _TipCard extends StatelessWidget {
   }
 }
 
-// ── Waveform icon — static 7-bar logo mark ────────────────────────────────
+// ── Waveform icon — 7-bar logo mark, static or animated ──────────────────
 
 class _WaveformIcon extends StatelessWidget {
-  final Color color;
+  final Color  color;
   final double width;
   final double height;
+  /// Animation phase 0→1 from AnimationController. Ignored when animate=false.
+  final double phase;
+  /// When true the bars breathe gently (matching the landing page animation).
+  final bool   animate;
 
   const _WaveformIcon({
     required this.color,
-    this.width  = 54,
-    this.height = 38,
+    this.width   = 54,
+    this.height  = 38,
+    this.phase   = 0.0,
+    this.animate = false,
   });
 
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size(width, height),
-        painter: _StaticWaveformPainter(color: color),
+        painter: _WaveformIconPainter(
+          color:   color,
+          phase:   phase,
+          animate: animate,
+        ),
       );
 }
 
-class _StaticWaveformPainter extends CustomPainter {
-  final Color color;
-  static const _ratios = [0.25, 0.45, 0.65, 0.85, 0.65, 0.45, 0.25];
+class _WaveformIconPainter extends CustomPainter {
+  final Color  color;
+  final double phase;
+  final bool   animate;
 
-  const _StaticWaveformPainter({required this.color});
+  static const _ratios = [0.25, 0.45, 0.65, 0.85, 0.65, 0.45, 0.25];
+  // Stagger delays as fractions of one cycle — centre bar leads (delay 0).
+  static const _delays = [0.54, 0.36, 0.18, 0.00, 0.18, 0.36, 0.54];
+
+  const _WaveformIconPainter({
+    required this.color,
+    required this.phase,
+    required this.animate,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color..style = PaintingStyle.fill;
-    const n = 7;
+    const n    = 7;
     final barW = size.width * 0.10;
     final gap  = (size.width - n * barW) / (n - 1);
     final cy   = size.height / 2;
     final r    = barW / 2;
 
     for (int i = 0; i < n; i++) {
-      final h = size.height * _ratios[i];
+      final double scaleY;
+      if (animate) {
+        // Gentle breathing matching landing page (minScale=0.4, speed=1).
+        final t    = ((phase - _delays[i]) % 1.0 + 1.0) % 1.0;
+        final sine = math.sin(t * 2 * math.pi);
+        scaleY     = 0.4 + 0.6 * (sine * 0.5 + 0.5);
+      } else {
+        scaleY = 1.0; // static — bars frozen at natural height
+      }
+
+      final h = (size.height * _ratios[i] * scaleY).clamp(2.0, size.height);
       final x = i * (barW + gap);
       final y = cy - h / 2;
       canvas.drawRRect(
@@ -502,7 +552,8 @@ class _StaticWaveformPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_StaticWaveformPainter old) => old.color != color;
+  bool shouldRepaint(_WaveformIconPainter old) =>
+      old.color != color || old.phase != phase || old.animate != animate;
 }
 
 // ── Setup card — shown when no server is configured ────────────────────────
