@@ -514,7 +514,6 @@ def _background_init():
         pystray.MenuItem("Settings",         lambda icon, item: _open_settings()),
         pystray.MenuItem("Activity log",     lambda icon, item: _open_log()),
         pystray.MenuItem("Open history",     lambda icon, item: logger.open_history()),
-        pystray.MenuItem("Startup log",      lambda icon, item: logger.open_startup_log()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Whisper Server...", lambda icon, item: _open_server_manager()),
         pystray.MenuItem(
