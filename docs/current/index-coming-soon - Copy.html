@@ -4,56 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
-    <meta name="description" content="Murmur — free, local voice dictation for Windows and Linux. Hold a key, speak, release.">
-    <title>Murmur — Free voice dictation</title>
+    <meta name="description" content="Murmur — free, local voice dictation for Windows and Linux. Coming soon.">
+    <title>Murmur — Coming soon</title>
     <style>
 
-        /* ── Colour tokens ───────────────────────────────────────────────────── */
+        /* ── Colour tokens — App palette ─────────────────────────────────────── */
 
         :root,
         [data-theme="dark"] {
-            /* Dark — Noctua dark */
-            --bg:           #100B07;
-            --bg-raised:    #1A1109;
-            --surface:      #231810;
-            --border:       #3A2618;
-            --text:         #EDE0C4;
-            --muted:        #907055;
-            --subtle:       #5A3E28;
-            --accent:       #C8923A;
-            --accent-dim:   #A87530;
-            --accent-text:  #100B07;
-            --code-bg:      #0D0906;
+            --bg:           #1c1c1e;
+            --bg-raised:    #242426;
+            --surface:      #2c2c2e;
+            --border:       #48484a;
+            --text:         #f0f0f0;
+            --muted:        #8e8e93;
+            --subtle:       #636366;
+            --accent:       #C8922A;
+            --accent-dim:   #A87520;
+            --accent-text:  #1c1c1e;
+            --code-bg:      #131315;
         }
 
         @media (prefers-color-scheme: light) {
             :root {
-                --bg:           #F5EADA;
-                --bg-raised:    #EFE3CB;
-                --surface:      #E8D9BF;
-                --border:       #CDBF9F;
-                --text:         #1E1208;
-                --muted:        #7A5535;
-                --subtle:       #B89A72;
-                --accent:       #8B5820;
-                --accent-dim:   #7A4C18;
-                --accent-text:  #F5EADA;
-                --code-bg:      #E0D2B5;
+                --bg:           #f2f2f7;
+                --bg-raised:    #ffffff;
+                --surface:      #ffffff;
+                --border:       #c6c6c8;
+                --text:         #1c1c1e;
+                --muted:        #6c6c70;
+                --subtle:       #aeaeb2;
+                --accent:       #A87520;
+                --accent-dim:   #8B6118;
+                --accent-text:  #ffffff;
+                --code-bg:      #e5e5ea;
             }
         }
 
         [data-theme="light"] {
-            --bg:           #F5EADA;
-            --bg-raised:    #EFE3CB;
-            --surface:      #E8D9BF;
-            --border:       #CDBF9F;
-            --text:         #1E1208;
-            --muted:        #7A5535;
-            --subtle:       #B89A72;
-            --accent:       #8B5820;
-            --accent-dim:   #7A4C18;
-            --accent-text:  #F5EADA;
-            --code-bg:      #E0D2B5;
+            --bg:           #f2f2f7;
+            --bg-raised:    #ffffff;
+            --surface:      #ffffff;
+            --border:       #c6c6c8;
+            --text:         #1c1c1e;
+            --muted:        #6c6c70;
+            --subtle:       #aeaeb2;
+            --accent:       #A87520;
+            --accent-dim:   #8B6118;
+            --accent-text:  #ffffff;
+            --code-bg:      #e5e5ea;
         }
 
         /* ── Reset ───────────────────────────────────────────────────────────── */
@@ -73,15 +72,6 @@
         a { color: var(--accent); text-decoration: none; }
         a:hover { text-decoration: underline; }
 
-        code {
-            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-            font-size: 0.82em;
-            background: var(--code-bg);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0.1em 0.4em;
-        }
-
         /* ── Waveform logo ───────────────────────────────────────────────────── */
 
         .waveform {
@@ -100,7 +90,6 @@
             animation: wave 2s ease-in-out infinite;
         }
 
-        /* Heights define the waveform shape; animation breathes them */
         .waveform .bar:nth-child(1) { height: 14px; animation-delay: 0.00s; }
         .waveform .bar:nth-child(2) { height: 26px; animation-delay: 0.18s; }
         .waveform .bar:nth-child(3) { height: 40px; animation-delay: 0.36s; }
@@ -112,6 +101,22 @@
         @keyframes wave {
             0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
             50%       { transform: scaleY(1);   opacity: 1;   }
+        }
+
+        /* ── Badge ───────────────────────────────────────────────────────────── */
+
+        .badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            border: 1px solid var(--accent-dim);
+            border-radius: 20px;
+            padding: 0.25em 0.85em;
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
         }
 
         /* ── Hero ────────────────────────────────────────────────────────────── */
@@ -137,8 +142,8 @@
         .hero .tagline {
             font-size: clamp(1rem, 2.5vw, 1.2rem);
             color: var(--muted);
-            max-width: 420px;
-            margin-bottom: 2.5rem;
+            max-width: 460px;
+            margin-bottom: 0.75rem;
         }
 
         .hero .tagline strong {
@@ -146,35 +151,80 @@
             font-weight: 600;
         }
 
-        /* ── Buttons ─────────────────────────────────────────────────────────── */
-
-        .buttons {
-            display: flex;
-            gap: 0.8rem;
-            flex-wrap: wrap;
-            justify-content: center;
+        .hero .sub-tagline {
+            font-size: 0.9rem;
+            color: var(--subtle);
+            max-width: 380px;
+            margin-bottom: 2.75rem;
+            line-height: 1.6;
         }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.7rem 1.5rem;
+        /* ── Waitlist form ───────────────────────────────────────────────────── */
+
+        .waitlist {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .waitlist input[type="email"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.7rem 1.1rem;
             border-radius: 9px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .waitlist input[type="email"]::placeholder {
+            color: var(--subtle);
+        }
+
+        .waitlist input[type="email"]:focus {
+            border-color: var(--accent-dim);
+        }
+
+        .waitlist button {
+            padding: 0.7rem 1.4rem;
+            border-radius: 9px;
+            border: none;
+            background: var(--accent);
+            color: var(--accent-text);
             font-size: 0.95rem;
             font-weight: 600;
-            text-decoration: none;
+            font-family: inherit;
+            cursor: pointer;
             transition: filter 0.15s ease, transform 0.15s ease;
             white-space: nowrap;
         }
-        .btn:hover { filter: brightness(1.12); transform: translateY(-2px); text-decoration: none; }
-        .btn:active { transform: translateY(0); }
 
-        .btn-primary  { background: var(--accent); color: var(--accent-text); }
-        .btn-secondary {
-            background: var(--surface);
-            color: var(--text);
-            border: 1px solid var(--border);
+        .waitlist button:hover {
+            filter: brightness(1.12);
+            transform: translateY(-2px);
+        }
+
+        .waitlist button:active { transform: translateY(0); }
+
+        .waitlist-note {
+            margin-top: 0.75rem;
+            font-size: 0.78rem;
+            color: var(--subtle);
+        }
+
+        .waitlist-success {
+            display: none;
+            margin-top: 0.75rem;
+            font-size: 0.88rem;
+            color: var(--accent);
+            font-weight: 600;
         }
 
         /* ── Divider ─────────────────────────────────────────────────────────── */
@@ -199,6 +249,13 @@
             font-weight: 700;
             letter-spacing: -0.025em;
             text-align: center;
+            margin-bottom: 0.6rem;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.92rem;
             margin-bottom: 2.75rem;
         }
 
@@ -235,55 +292,6 @@
             font-size: 0.865rem;
             color: var(--muted);
             line-height: 1.6;
-        }
-
-        /* ── Install blocks ──────────────────────────────────────────────────── */
-
-        .install-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.2rem;
-        }
-
-        @media (max-width: 600px) {
-            .install-grid { grid-template-columns: 1fr; }
-        }
-
-        .install-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .install-card h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-        }
-
-        .install-card pre {
-            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-            font-size: 0.78rem;
-            background: var(--code-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 0.9rem 1.1rem;
-            overflow-x: auto;
-            color: var(--text);
-            line-height: 1.7;
-            flex: 1;
-        }
-
-        .install-card .note {
-            font-size: 0.8rem;
-            color: var(--muted);
-            line-height: 1.55;
         }
 
         /* ── Footer ──────────────────────────────────────────────────────────── */
@@ -348,20 +356,27 @@
         <div class="bar"></div>
     </div>
 
+    <span class="badge">Coming soon</span>
+
     <h1>Murmur</h1>
 
     <p class="tagline">
-        Free, local voice dictation for Windows and Linux.<br>
+        Voice dictation that stays on your machine.<br>
         <strong>Hold a key. Speak. Release.</strong>
     </p>
 
-    <div class="buttons">
-        <a class="btn btn-primary" href="https://github.com/R3PC0N/murmur/releases/download/v1.1/Murmer-Setup-v1.1.exe">
-            ↓&nbsp; Download for Windows
-        </a>
-        <a class="btn btn-secondary" href="https://github.com/R3PC0N/murmur">
-            GitHub &rarr;
-        </a>
+    <p class="sub-tagline">
+        We're putting the finishing touches on something great.
+        Leave your email and we'll let you know when it's ready.
+    </p>
+
+    <div style="display:flex; flex-direction:column; align-items:center; width:100%;">
+        <form class="waitlist" id="waitlistForm" onsubmit="handleWaitlist(event)">
+            <input type="email" id="emailInput" placeholder="your@email.com" required autocomplete="email">
+            <button type="submit">Notify me</button>
+        </form>
+        <p class="waitlist-note">No spam. Just a heads-up when Murmur launches.</p>
+        <p class="waitlist-success" id="waitlistSuccess">You're on the list. We'll be in touch.</p>
     </div>
 
 </section>
@@ -371,7 +386,8 @@
 <!-- ══ Features ═══════════════════════════════════════════════════════════════ -->
 
 <div class="section">
-    <h2 class="section-title">Everything you need. Nothing you don't.</h2>
+    <h2 class="section-title">What's coming.</h2>
+    <p class="section-subtitle">Murmur is being built to be the voice dictation tool you actually want to use.</p>
 
     <div class="feature-grid">
 
@@ -383,72 +399,32 @@
 
         <div class="card">
             <div class="card-icon">🔒</div>
-            <h3>Fully local</h3>
-            <p>Runs OpenAI Whisper entirely on your own GPU or CPU. Your audio never leaves your machine.</p>
+            <h3>Your audio stays yours</h3>
+            <p>Transcription runs on your own hardware using OpenAI Whisper. Nothing leaves your machine unless you choose it.</p>
         </div>
 
         <div class="card">
             <div class="card-icon">✨</div>
             <h3>AI cleanup</h3>
-            <p>Optional Claude Haiku pass removes filler words, fixes punctuation, and preserves your language and tone.</p>
+            <p>An optional AI pass removes filler words, fixes punctuation, and preserves your language and tone.</p>
         </div>
 
         <div class="card">
             <div class="card-icon">🌐</div>
             <h3>Remote transcription</h3>
-            <p>Offload to a powerful machine on your network. Works over LAN, Tailscale, or a reverse proxy with HTTPS.</p>
+            <p>Offload heavy lifting to a more powerful machine — on your network or via a hosted endpoint.</p>
         </div>
 
         <div class="card">
             <div class="card-icon">🐧</div>
             <h3>Windows &amp; Linux</h3>
-            <p>Single <code>.exe</code> installer for Windows. One setup script handles everything on Ubuntu, Debian, and Zorin OS.</p>
+            <p>First-class support for Windows 10/11 and major Linux distributions. One installer, no fuss.</p>
         </div>
 
         <div class="card">
             <div class="card-icon">⚡</div>
-            <h3>Free &amp; open source</h3>
-            <p>MIT licensed. No subscription, no account, no telemetry. Download, run, done.</p>
-        </div>
-
-    </div>
-</div>
-
-<hr class="divider">
-
-<!-- ══ Install ════════════════════════════════════════════════════════════════ -->
-
-<div class="section">
-    <h2 class="section-title">Get started in minutes.</h2>
-
-    <div class="install-grid">
-
-        <div class="install-card">
-            <h3>🪟 Windows</h3>
-            <pre>1. Install Python 3.10+ from python.org
-   Tick "Add Python to PATH" during setup
-2. Download and run Murmur-Setup-vX.X.exe
-3. Add your Anthropic API key to .env
-   (optional — AI cleanup only)
-4. Hold F9 anywhere and start dictating</pre>
-            <div>
-                <a class="btn btn-primary" href="https://www.python.org/ftp/python/pymanager/python-manager-26.1.msix">
-                    ↓&nbsp; Download latest Python installer
-                </a>
-            </div>
-        </div>
-
-        <div class="install-card">
-            <h3>🐧 Linux &mdash; Ubuntu / Debian / Zorin OS</h3>
-            <pre>git clone https://github.com/R3PC0N/murmur.git
-cd murmur
-bash setup_linux.sh
-./murmur.sh</pre>
-            <p class="note">
-                The setup script installs all system packages, creates a virtual environment,
-                and enables the AppIndicator extension for the system tray.
-                Log out once after setup for the global hotkey to take effect.
-            </p>
+            <h3>No subscription required</h3>
+            <p>Run it locally for free, forever. A hosted option will be available for those who want it — never forced.</p>
         </div>
 
     </div>
@@ -460,11 +436,9 @@ bash setup_linux.sh
 
 <footer>
     <p>
-        <a href="https://github.com/R3PC0N/murmur">GitHub</a>
+        &copy; 2025 Murmur Labs
         <span class="sep">&middot;</span>
-        MIT License
-        <span class="sep">&middot;</span>
-        <a href="https://murmurlabs.dev">murmurlabs.dev</a>
+        <a href="mailto:hello@murmurlabs.dev">hello@murmurlabs.dev</a>
     </p>
 </footer>
 
@@ -484,7 +458,6 @@ bash setup_linux.sh
             if (btn) btn.textContent = theme === 'dark' ? SUN : MOON;
         }
 
-        // Apply saved or system theme immediately (before paint)
         var saved = localStorage.getItem(STORAGE_KEY);
         applyTheme(saved || getSystemPreference());
 
@@ -497,7 +470,6 @@ bash setup_linux.sh
                 applyTheme(next);
             });
 
-            // Keep in sync if system preference changes and user hasn't overridden
             window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
                 if (!localStorage.getItem(STORAGE_KEY)) {
                     applyTheme(getSystemPreference());
@@ -505,6 +477,21 @@ bash setup_linux.sh
             });
         });
     })();
+
+    function handleWaitlist(e) {
+        e.preventDefault();
+        var email = document.getElementById('emailInput').value;
+        var form = document.getElementById('waitlistForm');
+        var note = form.nextElementSibling;
+        var success = document.getElementById('waitlistSuccess');
+
+        // Placeholder — wire up to your backend or a service like Mailchimp/Listmonk
+        console.log('Waitlist signup:', email);
+
+        form.style.display = 'none';
+        note.style.display = 'none';
+        success.style.display = 'block';
+    }
 </script>
 
 </body>
