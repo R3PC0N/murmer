@@ -89,6 +89,15 @@ def log_startup(msg: str):
         pass
 
 
+def get_startup_log_lines() -> list[str]:
+    try:
+        if _STARTUP_LOG.exists():
+            return _STARTUP_LOG.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        pass
+    return []
+
+
 def open_startup_log():
     if sys.platform == "win32":
         if _STARTUP_LOG.exists():

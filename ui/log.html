@@ -177,10 +177,11 @@
 <div class="layout">
 
   <div class="header">
-    <div class="title">Activity</div>
+    <div class="title" id="header-title">Activity</div>
     <div class="seg-ctrl">
-      <button class="seg-btn active"   onclick="setMode('compact')">Compact</button>
-      <button class="seg-btn inactive" onclick="setMode('debug')">Debug</button>
+      <button class="seg-btn active"   id="btn-compact" onclick="setMode('compact')">Compact</button>
+      <button class="seg-btn inactive" id="btn-debug"   onclick="setMode('debug')">Debug</button>
+      <button class="seg-btn inactive" id="btn-startup" onclick="setMode('startup')">Startup</button>
     </div>
   </div>
 
@@ -188,9 +189,13 @@
     <div class="log-empty" id="log-empty">No activity yet.</div>
   </div>
 
-  <div class="footer">
+  <div class="footer" id="footer-activity">
     <button class="btn-primary" onclick="openHistory()">Open history</button>
     <button class="btn-ghost"   onclick="clearLog()">Clear</button>
+  </div>
+  <div class="footer" id="footer-startup" style="display:none">
+    <button class="btn-primary" onclick="openStartupLog()">Open startup log</button>
+    <button class="btn-ghost"   onclick="loadStartupLog()">Refresh</button>
   </div>
 
 </div>
@@ -251,12 +256,25 @@
   // ── Mode toggle ────────────────────────────────────────────────────────────
   function setMode(m) {
     mode = m;
-    document.querySelectorAll('.seg-btn').forEach((btn, i) => {
-      const bm = i === 0 ? 'compact' : 'debug';
-      btn.classList.toggle('active', bm === m);
-      btn.classList.toggle('inactive', bm !== m);
+    const modes = ['compact', 'debug', 'startup'];
+    modes.forEach(bm => {
+      const btn = document.getElementById('btn-' + bm);
+      if (btn) {
+        btn.classList.toggle('active', bm === m);
+        btn.classList.toggle('inactive', bm !== m);
+      }
     });
-    renderAll();
+
+    const isStartup = m === 'startup';
+    document.getElementById('header-title').textContent = isStartup ? 'Startup' : 'Activity';
+    document.getElementById('footer-activity').style.display = isStartup ? 'none' : '';
+    document.getElementById('footer-startup').style.display  = isStartup ? '' : 'none';
+
+    if (isStartup) {
+      loadStartupLog();
+    } else {
+      renderAll();
+    }
   }
 
   // ── Push new entry from Python ─────────────────────────────────────────────
@@ -283,6 +301,55 @@
 
   function openHistory() {
     if (window.pywebview) window.pywebview.api.open_history();
+  }
+
+  function openStartupLog() {
+    if (window.pywebview) window.pywebview.api.open_startup_log();
+  }
+
+  async function loadStartupLog() {
+    const area = document.getElementById('log-area');
+    const empty = document.getElementById('log-empty');
+    area.innerHTML = '';
+    area.appendChild(empty);
+
+    if (!window.pywebview) {
+      empty.style.display = '';
+      empty.textContent = 'No startup log available.';
+      return;
+    }
+
+    const lines = await window.pywebview.api.get_startup_log();
+    if (!lines || lines.length === 0) {
+      empty.style.display = '';
+      empty.textContent = 'No startup log available yet.';
+      return;
+    }
+
+    empty.style.display = 'none';
+    lines.forEach(line => {
+      const match = line.match(/^\[(\d{2}:\d{2}:\d{2}\.\d{3})\] (.+)$/);
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      if (match) {
+        const time = document.createElement('span');
+        time.className = 'log-time';
+        time.textContent = '[' + match[1] + ']';
+        const text = document.createElement('span');
+        const msg = match[2];
+        text.className = msg.startsWith('===') ? 'log-info'
+                       : msg.startsWith('⚠') || msg.toLowerCase().includes('error') ? 'log-error'
+                       : msg.toLowerCase().includes('ready') || msg.toLowerCase().includes('complete') ? 'log-ok'
+                       : 'log-default';
+        text.textContent = msg;
+        div.appendChild(time);
+        div.appendChild(text);
+      } else {
+        div.textContent = line;
+      }
+      area.appendChild(div);
+    });
+    area.scrollTop = area.scrollHeight;
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────

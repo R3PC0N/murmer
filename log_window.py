@@ -18,6 +18,12 @@ class LogAPI:
     def open_history(self):
         logger.open_history()
 
+    def get_startup_log(self) -> list[str]:
+        return logger.get_startup_log_lines()
+
+    def open_startup_log(self):
+        logger.open_startup_log()
+
 
 class LogWindow:
     def __init__(self):
