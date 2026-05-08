@@ -481,18 +481,28 @@ def _start_overlay_thread():
 def _background_init():
     global _icon
 
+    logger.log_startup(f"=== Murmur startup ===")
+    logger.log_startup(f"Model: {config.WHISPER_MODEL} | Device: {config.WHISPER_DEVICE} | Compute: {config.WHISPER_COMPUTE_TYPE}")
+    logger.log_startup(f"Mode: {config.TRANSCRIPTION_MODE} | Server autostart: {config.WHISPER_SERVER_AUTOSTART} | AI cleanup: {config.AI_CLEANUP_ENABLED}")
+
     if config.WHISPER_SERVER_AUTOSTART:
         if splash:
             splash.update_status("Starting Whisper Server...")
+        logger.log_startup("Starting Whisper Server...")
         _start_whisper_server()
+        logger.log_startup("Whisper Server process launched.")
 
     if splash:
         splash.update_status(f"Loading speech model ({config.WHISPER_MODEL})...")
+    logger.log_startup(f"Loading speech model ({config.WHISPER_MODEL} on {config.WHISPER_DEVICE})...")
     transcriber.load()
+    logger.log_startup("Speech model ready.")
 
     if splash:
         splash.update_status("Loading AI cleanup..." if config.AI_CLEANUP_ENABLED else "Almost ready...")
+    logger.log_startup("Loading AI cleanup..." if config.AI_CLEANUP_ENABLED else "AI cleanup disabled.")
     _load_cleaner()
+    logger.log_startup("Startup complete.")
 
     key = config.PUSH_TO_TALK_KEY.upper()
     logger.log(f"Ready. Hold {key} to record, release to transcribe and paste.", level="INFO")
@@ -504,6 +514,7 @@ def _background_init():
         pystray.MenuItem("Settings",         lambda icon, item: _open_settings()),
         pystray.MenuItem("Activity log",     lambda icon, item: _open_log()),
         pystray.MenuItem("Open history",     lambda icon, item: logger.open_history()),
+        pystray.MenuItem("Startup log",      lambda icon, item: logger.open_startup_log()),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Whisper Server...", lambda icon, item: _open_server_manager()),
         pystray.MenuItem(

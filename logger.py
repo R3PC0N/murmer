@@ -10,9 +10,13 @@ from pathlib import Path
 #   ERROR       — errors (shown in all modes)
 
 if sys.platform == "win32":
-    _HISTORY_FILE = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmur" / "history.log"
+    _LOG_DIR = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmur"
 else:
-    _HISTORY_FILE = Path.home() / ".local" / "share" / "Murmur" / "history.log"
+    _LOG_DIR = Path.home() / ".local" / "share" / "Murmur"
+
+_HISTORY_FILE = _LOG_DIR / "history.log"
+_STARTUP_LOG   = _LOG_DIR / "startup.log"
+_startup_fresh  = True  # overwrite on first write each run
 _buffer: list[tuple[str, str, str]] = []  # (timestamp, level, message)
 _callbacks: list = []
 
@@ -70,3 +74,29 @@ def open_history():
             subprocess.Popen(["xdg-open", str(_HISTORY_FILE)])
         else:
             subprocess.Popen(["xdg-open", str(_HISTORY_FILE.parent)])
+
+
+def log_startup(msg: str):
+    global _startup_fresh
+    try:
+        _LOG_DIR.mkdir(parents=True, exist_ok=True)
+        mode = "w" if _startup_fresh else "a"
+        _startup_fresh = False
+        ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        with open(_STARTUP_LOG, mode, encoding="utf-8") as f:
+            f.write(f"[{ts}] {msg}\n")
+    except Exception:
+        pass
+
+
+def open_startup_log():
+    if sys.platform == "win32":
+        if _STARTUP_LOG.exists():
+            subprocess.Popen(["notepad.exe", str(_STARTUP_LOG)])
+        else:
+            subprocess.Popen(["notepad.exe"])
+    else:
+        if _STARTUP_LOG.exists():
+            subprocess.Popen(["xdg-open", str(_STARTUP_LOG)])
+        else:
+            subprocess.Popen(["xdg-open", str(_LOG_DIR)])
