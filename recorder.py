@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 import numpy as np
 import sounddevice as sd
@@ -11,12 +12,21 @@ import config
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
+_DEVICE_QUERY_SCRIPT = (
+    "import sounddevice as sd, json; seen=set(); out=[];"
+    "[out.append(d['name']) or seen.add(d['name'])"
+    " for d in sd.query_devices()"
+    " if d['max_input_channels']>0 and d['name'] not in seen];"
+    "print(json.dumps(out))"
+)
+
+
 def _query_input_names() -> list[str]:
     """Return names of all input devices.
 
-    On Windows uses a subprocess to avoid a WASAPI/COM deadlock that occurs
-    under pythonw.exe when sd.query_devices() is called from a thread that
-    shares a process with WebView2's COM apartment.
+    On Windows, sd.query_devices() deadlocks under pythonw.exe due to a
+    WASAPI/COM conflict with WebView2. Fix: run the query in a fresh
+    python.exe subprocess (console subsystem, no COM conflict).
     """
     if sys.platform != "win32":
         seen: set[str] = set()
@@ -26,19 +36,27 @@ def _query_input_names() -> list[str]:
                 seen.add(dev["name"])
                 names.append(dev["name"])
         return names
+
+    # Use python.exe (console), never pythonw.exe — the latter shares the
+    # same WASAPI/COM hang under pythonw.exe parent processes.
+    python_exe = Path(sys.executable).with_name("python.exe")
+    if not python_exe.exists():
+        python_exe = Path(sys.executable)
+
     try:
-        result = subprocess.run(
-            [sys.executable, "-c",
-             "import sounddevice as sd, json; seen=set(); out=[];\n"
-             "[out.append(d['name']) or seen.add(d['name'])\n"
-             " for d in sd.query_devices()\n"
-             " if d['max_input_channels']>0 and d['name'] not in seen];\n"
-             "print(json.dumps(out))"],
-            capture_output=True, text=True, timeout=8,
+        proc = subprocess.Popen(
+            [str(python_exe), "-c", _DEVICE_QUERY_SCRIPT],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             creationflags=_NO_WINDOW,
         )
-        if result.returncode == 0 and result.stdout.strip():
-            return json.loads(result.stdout.strip())
+        try:
+            stdout, _ = proc.communicate(timeout=8)
+            data = stdout.decode("utf-8", errors="ignore").strip()
+            if data:
+                return json.loads(data)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
     except Exception:
         pass
     return []

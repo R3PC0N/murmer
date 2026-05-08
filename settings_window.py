@@ -6,7 +6,7 @@ import webview
 
 import autostart
 import config
-from recorder import device_available, get_device_names
+from recorder import get_device_names
 from theme_utils import apply_title_bar_theme
 
 _UI = Path(__file__).parent / "ui" / "settings.html"
@@ -20,7 +20,6 @@ class SettingsAPI:
 
     def get_config(self) -> dict:
         current = config.AUDIO_DEVICE
-        ok = device_available(current)
         return {
             "PUSH_TO_TALK_KEY":       config.PUSH_TO_TALK_KEY,
             "AUTO_START":             autostart.is_enabled(),

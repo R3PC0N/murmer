@@ -703,15 +703,8 @@
     });
     if (cfg.AUDIO_DEVICE) devSel.value = cfg.AUDIO_DEVICE;
 
-    const devStatus = document.getElementById('device-status');
-    devStatus.style.display = '';
-    devStatus.className = cfg._device_ok ? 'status-ok' : 'status-err';
-    document.getElementById('device-icon-ok').style.display = cfg._device_ok ? '' : 'none';
-    document.getElementById('device-icon-err').style.display = cfg._device_ok ? 'none' : '';
-    const devName = cfg.AUDIO_DEVICE || 'Default';
-    document.getElementById('device-status-text').textContent = cfg._device_ok
-      ? devName
-      : `${devName} — not detected. Check Settings → Audio.`;
+    // Device status indicator: hidden until async check is implemented
+    document.getElementById('device-status').style.display = 'none';
 
     // Transcription
     setMode(cfg.TRANSCRIPTION_MODE || 'local');
