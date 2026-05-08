@@ -481,18 +481,17 @@ def _start_overlay_thread():
 def _background_init():
     global _icon
 
-    from recorder import device_available
-    if not device_available(config.AUDIO_DEVICE):
-        dev = config.AUDIO_DEVICE or "Default"
-        logger.log(f"⚠ Audio device not detected: {dev}. Check Settings → Audio.", level="ERROR")
-    else:
-        dev = config.AUDIO_DEVICE or "Default"
-        logger.log(f"Audio device: {dev}")
-
     if config.WHISPER_SERVER_AUTOSTART:
+        if splash:
+            splash.update_status("Starting Whisper Server...")
         _start_whisper_server()
 
+    if splash:
+        splash.update_status(f"Loading speech model ({config.WHISPER_MODEL})...")
     transcriber.load()
+
+    if splash:
+        splash.update_status("Loading AI cleanup..." if config.AI_CLEANUP_ENABLED else "Almost ready...")
     _load_cleaner()
 
     key = config.PUSH_TO_TALK_KEY.upper()

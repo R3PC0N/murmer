@@ -11,7 +11,7 @@ _UI = Path(__file__).parent / "ui" / "splash.html"
 
 class SplashAPI:
     def get_status(self):
-        return "Loading speech model..."
+        return "Starting up..."
 
 
 class SplashScreen:
@@ -42,6 +42,13 @@ class SplashScreen:
         )
         self._window.events.loaded += lambda: apply_title_bar_theme(self._window)
         return self._window
+
+    def update_status(self, text: str):
+        if self._window:
+            safe = text.replace("\\", "\\\\").replace("'", "\\'")
+            self._window.evaluate_js(
+                f"var el = document.getElementById('status'); if (el) el.textContent = '{safe}';"
+            )
 
     def hide(self):
         if self._window:
