@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Privacy Policy — Murmur</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1c1c1e;
+      color: #e5e5ea;
+      line-height: 1.7;
+      padding: 48px 24px 80px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 48px;
+      text-decoration: none;
+    }
+
+    .logo-bars {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 24px;
+    }
+
+    .logo-bars span {
+      display: block;
+      width: 4px;
+      border-radius: 2px;
+      background: #C8922A;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .updated {
+      font-size: 13px;
+      color: #8e8e93;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      font-size: 17px;
+      font-weight: 600;
+      color: #C8922A;
+      margin: 36px 0 12px;
+    }
+
+    p { margin-bottom: 14px; color: #aeaeb2; }
+
+    ul {
+      margin: 0 0 14px 20px;
+      color: #aeaeb2;
+    }
+
+    ul li { margin-bottom: 6px; }
+
+    a { color: #C8922A; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #48484a;
+      margin: 40px 0;
+    }
+
+    footer {
+      margin-top: 60px;
+      font-size: 13px;
+      color: #636366;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <a href="/" class="logo">
+      <div class="logo-bars">
+        <span style="height:25%"></span>
+        <span style="height:45%"></span>
+        <span style="height:65%"></span>
+        <span style="height:85%"></span>
+        <span style="height:65%"></span>
+        <span style="height:45%"></span>
+        <span style="height:25%"></span>
+      </div>
+      <span class="logo-text">Murmur</span>
+    </a>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: May 2026</p>
+
+    <p>Murmur is a voice dictation app that records audio, transcribes it using a Whisper server, and pastes the result into your active app. This policy explains what data is involved and how it is handled.</p>
+
+    <h2>What Murmur does with your audio</h2>
+    <p>When you trigger a recording, Murmur captures audio from your microphone and sends it to a Whisper transcription server. This server is either:</p>
+    <ul>
+      <li>A server you run yourself, or</li>
+      <li>A server you have configured in the app (e.g. your own hosted instance)</li>
+    </ul>
+    <p>Murmur Labs does not operate any shared transcription servers. Your audio is sent only to the server you have configured. We do not receive, store or process your audio recordings.</p>
+
+    <h2>Optional AI cleanup</h2>
+    <p>If you enable the AI Cleanup feature, the transcribed text (not the audio) is sent to Anthropic's Claude API to remove filler words and fix punctuation. This is optional and disabled by default. Anthropic's privacy policy applies to this processing: <a href="https://www.anthropic.com/privacy" target="_blank">anthropic.com/privacy</a>.</p>
+
+    <h2>Permissions used</h2>
+    <ul>
+      <li><strong>Microphone (RECORD_AUDIO)</strong> — required to record your voice for transcription. Audio is never stored on device beyond the duration of a single recording session.</li>
+      <li><strong>Accessibility Service</strong> — used to detect when a keyboard is visible (to show the overlay) and to paste transcribed text into the focused input field.</li>
+      <li><strong>Display over other apps (SYSTEM_ALERT_WINDOW)</strong> — required to show the floating overlay button above other apps.</li>
+      <li><strong>Receive boot completed (RECEIVE_BOOT_COMPLETED)</strong> — optional; used only if you enable "Start on boot" in settings.</li>
+    </ul>
+
+    <h2>Data storage</h2>
+    <p>Murmur stores the following data locally on your device only:</p>
+    <ul>
+      <li>App settings (server URL, API key, profile preferences)</li>
+      <li>Your style profile and word corrections</li>
+    </ul>
+    <p>No personal data is transmitted to Murmur Labs. No analytics, crash reporting or tracking SDKs are included in the app.</p>
+
+    <h2>Third-party services</h2>
+    <p>Murmur communicates only with servers you explicitly configure. If you use AI Cleanup, text is sent to Anthropic's API. No other third-party services are used.</p>
+
+    <h2>Children</h2>
+    <p>Murmur is not directed at children under 13 and we do not knowingly collect data from children.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If we make material changes to this policy, we will update the date at the top of this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy? Contact us at <a href="mailto:murmurlabs.dev@gmail.com">murmurlabs.dev@gmail.com</a>.</p>
+
+    <hr class="divider"/>
+
+    <footer>
+      &copy; 2026 Murmur Labs &nbsp;·&nbsp; <a href="/">murmurlabs.dev</a>
+    </footer>
+
+  </div>
+</body>
+</html>
