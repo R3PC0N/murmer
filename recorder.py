@@ -1,3 +1,6 @@
+import json
+import subprocess
+import sys
 import threading
 
 import numpy as np
@@ -5,40 +8,81 @@ import sounddevice as sd
 
 import config
 
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+def _query_input_names() -> list[str]:
+    """Return names of all input devices.
+
+    On Windows uses a subprocess to avoid a WASAPI/COM deadlock that occurs
+    under pythonw.exe when sd.query_devices() is called from a thread that
+    shares a process with WebView2's COM apartment.
+    """
+    if sys.platform != "win32":
+        seen: set[str] = set()
+        names: list[str] = []
+        for dev in sd.query_devices():
+            if dev["max_input_channels"] > 0 and dev["name"] not in seen:
+                seen.add(dev["name"])
+                names.append(dev["name"])
+        return names
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c",
+             "import sounddevice as sd, json; seen=set(); out=[];\n"
+             "[out.append(d['name']) or seen.add(d['name'])\n"
+             " for d in sd.query_devices()\n"
+             " if d['max_input_channels']>0 and d['name'] not in seen];\n"
+             "print(json.dumps(out))"],
+            capture_output=True, text=True, timeout=8,
+            creationflags=_NO_WINDOW,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout.strip())
+    except Exception:
+        pass
+    return []
+
 
 def list_input_devices() -> list[tuple[int, str]]:
     """Return (index, name) pairs for all available input devices, deduplicated."""
-    seen = set()
-    devices = []
-    for i, dev in enumerate(sd.query_devices()):
-        if dev["max_input_channels"] > 0:
-            name = dev["name"]
-            if name not in seen:
-                seen.add(name)
-                devices.append((i, name))
-    return devices
+    names = _query_input_names()
+    return list(enumerate(names))
 
 
 def get_device_names() -> list[str]:
     """Return display names for the settings dropdown (includes a default option)."""
-    return ["Default"] + [name for _, name in list_input_devices()]
+    return ["Default"] + _query_input_names()
 
 
 def resolve_device(name: str | None) -> int | None:
-    """Resolve a device name to its index, or None for system default."""
+    """Resolve a device name to its sounddevice index, or None for system default."""
     if not name or name == "Default":
         return None
-    for idx, dev_name in list_input_devices():
-        if dev_name == name:
+    for idx, dev in enumerate(sd.query_devices()):
+        if dev["max_input_channels"] > 0 and dev["name"] == name:
             return idx
     return None
 
 
 def device_available(name: str | None) -> bool:
     """Return True if the configured device exists (or Default is used)."""
+    names = _query_input_names()
     if not name or name == "Default":
-        return len(list_input_devices()) > 0
-    return any(n == name for _, n in list_input_devices())
+        return len(names) > 0
+    return name in names
+
+
+def check_device(name: str | None) -> dict:
+    """Return {"found": bool, "name": str} for splash/log feedback."""
+    names = _query_input_names()
+    if not name or name == "Default":
+        if names:
+            return {"found": True, "name": names[0]}
+        return {"found": False, "name": "Default"}
+    if name in names:
+        return {"found": True, "name": name}
+    return {"found": False, "name": name}
 
 
 class Recorder:

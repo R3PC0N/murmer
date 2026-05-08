@@ -481,9 +481,28 @@ def _start_overlay_thread():
 def _background_init():
     global _icon
 
-    logger.log_startup(f"=== Murmur startup ===")
+    logger.log_startup("=== Murmur startup ===")
     logger.log_startup(f"Model: {config.WHISPER_MODEL} | Device: {config.WHISPER_DEVICE} | Compute: {config.WHISPER_COMPUTE_TYPE}")
     logger.log_startup(f"Mode: {config.TRANSCRIPTION_MODE} | Server autostart: {config.WHISPER_SERVER_AUTOSTART} | AI cleanup: {config.AI_CLEANUP_ENABLED}")
+
+    # Microphone check
+    if splash:
+        splash.update_status("Checking microphone...")
+    logger.log_startup("Checking microphone...")
+    from recorder import check_device
+    mic = check_device(config.AUDIO_DEVICE)
+    if mic["found"]:
+        mic_status = f"Microphone: {mic['name']}"
+        logger.log(f"Audio device: {mic['name']}")
+        logger.log_startup(f"Microphone OK: {mic['name']}")
+    else:
+        mic_status = f"⚠ Microphone not found — check Settings → Audio"
+        logger.log("⚠ Audio device not detected. Open Settings → Audio to fix.", level="ERROR")
+        logger.log_startup(f"⚠ Microphone not found: {mic['name']}")
+    if splash:
+        splash.update_status(mic_status)
+    import time as _time
+    _time.sleep(1.2)
 
     if config.WHISPER_SERVER_AUTOSTART:
         if splash:

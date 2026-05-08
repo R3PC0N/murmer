@@ -393,11 +393,16 @@
             <div class="field-label">Input device</div>
             <select id="audio-device" style="max-width:360px"></select>
             <div id="device-status" class="status-ok" style="display:none">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <svg id="device-icon-ok" width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.4"/>
                 <path d="M4 6l1.5 1.5L8 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Device available
+              <svg id="device-icon-err" width="12" height="12" viewBox="0 0 12 12" fill="none" style="display:none">
+                <path d="M6 1L11 10H1L6 1Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M6 5v2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                <circle cx="6" cy="9" r="0.6" fill="currentColor"/>
+              </svg>
+              <span id="device-status-text">Device available</span>
             </div>
           </div>
         </div>
@@ -701,9 +706,12 @@
     const devStatus = document.getElementById('device-status');
     devStatus.style.display = '';
     devStatus.className = cfg._device_ok ? 'status-ok' : 'status-err';
-    devStatus.querySelector('svg').style.display = cfg._device_ok ? '' : 'none';
-    devStatus.childNodes[devStatus.childNodes.length - 1].textContent =
-      cfg._device_ok ? ' Device available' : ' Device not detected';
+    document.getElementById('device-icon-ok').style.display = cfg._device_ok ? '' : 'none';
+    document.getElementById('device-icon-err').style.display = cfg._device_ok ? 'none' : '';
+    const devName = cfg.AUDIO_DEVICE || 'Default';
+    document.getElementById('device-status-text').textContent = cfg._device_ok
+      ? devName
+      : `${devName} — not detected. Check Settings → Audio.`;
 
     // Transcription
     setMode(cfg.TRANSCRIPTION_MODE || 'local');
