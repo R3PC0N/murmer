@@ -38,7 +38,6 @@ class SettingsAPI:
             "CUSTOM_STYLE_PROMPT":    config.CUSTOM_STYLE_PROMPT,
             "USER_PROFILE":           config.USER_PROFILE,
             "WORD_CORRECTIONS":       dict(config.WORD_CORRECTIONS),
-            "_device_ok":             ok,
         }
 
     def get_devices(self) -> list:
