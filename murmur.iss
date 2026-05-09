@@ -110,16 +110,7 @@ var
   ResultCode: Integer;
 begin
   Result := Exec('python.exe',
-    '-c ' + #34 + 'import sys; v=sys.version_info; sys.exit(0 if v.major==3 and 10<=v.minor<=12 else 1)' + #34,
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
-end;
-
-function PythonVersionTooNew(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := Exec('python.exe',
-    '-c ' + #34 + 'import sys; v=sys.version_info; sys.exit(0 if v.major==3 and v.minor>=13 else 1)' + #34,
+    '-c ' + #34 + 'import sys; v=sys.version_info; sys.exit(0 if v.major==3 and v.minor>=10 else 1)' + #34,
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
@@ -132,11 +123,11 @@ begin
   if not PythonFound() then
   begin
     MsgBox(
-      'Python 3.10–3.12 is required but was not found in PATH.' + #13#10#13#10 +
-      'Please install Python 3.11 from:' + #13#10 +
+      'Python 3.10 or newer is required but was not found in PATH.' + #13#10#13#10 +
+      'Please install Python from:' + #13#10 +
       'https://www.python.org/downloads/' + #13#10#13#10 +
-      'Important: choose version 3.11, and tick "Add Python to PATH"' + #13#10 +
-      'during installation, then re-run this installer.',
+      'Important: tick "Add Python to PATH" during installation,' + #13#10 +
+      'then re-run this installer.',
       mbCriticalError, MB_OK
     );
     Result := False;
@@ -145,25 +136,14 @@ begin
 
   if not PythonVersionCompatible() then
   begin
-    if PythonVersionTooNew() then
-      MsgBox(
-        'Python 3.13 or newer was detected, which is not yet compatible.' + #13#10#13#10 +
-        'Murmur requires Python 3.10, 3.11, or 3.12.' + #13#10#13#10 +
-        'Please install Python 3.11 from:' + #13#10 +
-        'https://www.python.org/downloads/' + #13#10#13#10 +
-        'Important: choose version 3.11, and tick "Add Python to PATH"' + #13#10 +
-        'during installation, then re-run this installer.',
-        mbCriticalError, MB_OK
-      )
-    else
-      MsgBox(
-        'Python 3.10 or newer is required but an older version was detected.' + #13#10#13#10 +
-        'Please install Python 3.11 from:' + #13#10 +
-        'https://www.python.org/downloads/' + #13#10#13#10 +
-        'Important: choose version 3.11, and tick "Add Python to PATH"' + #13#10 +
-        'during installation, then re-run this installer.',
-        mbCriticalError, MB_OK
-      );
+    MsgBox(
+      'Python 3.10 or newer is required but an older version was detected.' + #13#10#13#10 +
+      'Please install a recent Python version from:' + #13#10 +
+      'https://www.python.org/downloads/' + #13#10#13#10 +
+      'Important: tick "Add Python to PATH" during installation,' + #13#10 +
+      'then re-run this installer.',
+      mbCriticalError, MB_OK
+    );
     Result := False;
     Exit;
   end;
