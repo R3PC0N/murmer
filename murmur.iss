@@ -110,7 +110,16 @@ var
   ResultCode: Integer;
 begin
   Result := Exec('python.exe',
-    '-c ' + #34 + 'import sys; v=sys.version_info; sys.exit(0 if v.major==3 and v.minor>=10 else 1)' + #34,
+    '-c ' + #34 + 'import sys; v=sys.version_info; sys.exit(0 if v.major==3 and 10<=v.minor<=13 else 1)' + #34,
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+end;
+
+function PythonVersionTooNew(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec('python.exe',
+    '-c ' + #34 + 'import sys; v=sys.version_info; sys.exit(0 if v.major==3 and v.minor>=14 else 1)' + #34,
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
@@ -136,14 +145,24 @@ begin
 
   if not PythonVersionCompatible() then
   begin
-    MsgBox(
-      'Python 3.10 or newer is required but an older version was detected.' + #13#10#13#10 +
-      'Please install a recent Python version from:' + #13#10 +
-      'https://www.python.org/downloads/' + #13#10#13#10 +
-      'Important: tick "Add Python to PATH" during installation,' + #13#10 +
-      'then re-run this installer.',
-      mbCriticalError, MB_OK
-    );
+    if PythonVersionTooNew() then
+      MsgBox(
+        'Python 3.14 or newer is not yet compatible with Murmur.' + #13#10#13#10 +
+        'Please install Python 3.11 or 3.13 from:' + #13#10 +
+        'https://www.python.org/downloads/' + #13#10#13#10 +
+        'Important: tick "Add Python to PATH" during installation,' + #13#10 +
+        'then re-run this installer.',
+        mbCriticalError, MB_OK
+      )
+    else
+      MsgBox(
+        'Python 3.10 or newer is required but an older version was detected.' + #13#10#13#10 +
+        'Please install Python 3.11 or 3.13 from:' + #13#10 +
+        'https://www.python.org/downloads/' + #13#10#13#10 +
+        'Important: tick "Add Python to PATH" during installation,' + #13#10 +
+        'then re-run this installer.',
+        mbCriticalError, MB_OK
+      );
     Result := False;
     Exit;
   end;
