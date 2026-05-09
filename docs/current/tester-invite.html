@@ -14,7 +14,7 @@
           <!-- Logo -->
           <tr>
             <td style="padding-bottom:40px;">
-              <img src="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'160'%20height%3D'24'%20viewBox%3D'0%200%20160%2024'%3E%3Crect%20x%3D'0'%20y%3D'9'%20width%3D'4'%20height%3D'6'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Crect%20x%3D'7'%20y%3D'6'%20width%3D'4'%20height%3D'11'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Crect%20x%3D'14'%20y%3D'4'%20width%3D'4'%20height%3D'16'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Crect%20x%3D'21'%20y%3D'2'%20width%3D'4'%20height%3D'20'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Crect%20x%3D'28'%20y%3D'4'%20width%3D'4'%20height%3D'16'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Crect%20x%3D'35'%20y%3D'6'%20width%3D'4'%20height%3D'11'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Crect%20x%3D'42'%20y%3D'9'%20width%3D'4'%20height%3D'6'%20rx%3D'2'%20fill%3D'%23C8922A'%2F%3E%3Ctext%20x%3D'56'%20y%3D'12'%20font-family%3D'-apple-system%2CBlinkMacSystemFont%2CSegoe%20UI%2CRoboto%2Csans-serif'%20font-size%3D'18'%20font-weight%3D'600'%20fill%3D'%23ffffff'%20letter-spacing%3D'-0.3'%20dominant-baseline%3D'middle'%3EMurmur%3C%2Ftext%3E%3C%2Fsvg%3E" width="160" height="24" alt="Murmur" style="display:block;"/>
+              <img src="https://murmurlabs.dev/murmur-logo-email.png" width="160" height="24" alt="Murmur" style="display:block;"/>
             </td>
           </tr>
 
@@ -29,7 +29,10 @@
           <tr>
             <td style="padding-bottom:32px;">
               <p style="margin:0;font-size:15px;color:#aeaeb2;line-height:1.7;">
-                I'm building Murmur — a voice dictation app for Android that transcribes your speech and pastes it directly into whatever you're typing. No cloud subscription, no lock-in: you point it at your own Whisper server and that's it.
+                I'm building Murmur — a voice dictation app that transcribes your speech and pastes it directly into whatever you're typing. No cloud subscription, no lock-in: you point it at your own Whisper server and that's it.
+              </p>
+              <p style="margin:16px 0 0;font-size:14px;color:#636366;line-height:1.7;">
+                <strong style="color:#aeaeb2;">Available now:</strong> Android &amp; Windows &nbsp;·&nbsp; <strong style="color:#aeaeb2;">In development:</strong> iOS
               </p>
             </td>
           </tr>
@@ -41,7 +44,147 @@
             </td>
           </tr>
 
-          <!-- What to test -->
+          <!-- Android section -->
+          <tr>
+            <td style="padding-bottom:8px;">
+              <h2 style="margin:0;font-size:14px;font-weight:600;color:#C8922A;letter-spacing:0.5px;text-transform:uppercase;">Android</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:20px;">
+              <p style="margin:0;font-size:15px;color:#aeaeb2;line-height:1.7;">
+                Tap the button below on your Android device to join the beta via Google Play:
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:12px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#C8922A;border-radius:10px;padding:14px 28px;">
+                    <a href="https://play.google.com/apps/internaltest/4700967536519018801" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:block;">Join the Android beta →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:32px;">
+              <p style="margin:0;font-size:13px;color:#636366;line-height:1.6;">Requires Android 6.0 or higher. &nbsp;·&nbsp; iOS is in development — coming later.</p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding-bottom:32px;">
+              <hr style="border:none;border-top:1px solid #3a3a3c;margin:0;"/>
+            </td>
+          </tr>
+
+          <!-- Windows section -->
+          <tr>
+            <td style="padding-bottom:8px;">
+              <h2 style="margin:0;font-size:14px;font-weight:600;color:#C8922A;letter-spacing:0.5px;text-transform:uppercase;">Windows</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:20px;">
+              <p style="margin:0;font-size:15px;color:#aeaeb2;line-height:1.7;">
+                On iOS or just prefer a desktop experience? Murmur runs on Windows too — install in this order:
+              </p>
+              <ol style="margin:12px 0 0 0;padding-left:20px;color:#aeaeb2;font-size:15px;line-height:1.9;">
+                <li><strong style="color:#e5e5ea;">Python 3.10–3.13</strong> - required. Python 3.11 is recommended if you don't have Python yet. <span style="color:#C8922A;">⚠ Python 3.14 (currently the latest on python.org) is not yet compatible.</span> Make sure to tick "Add Python to PATH" during installation.</li>
+                <li><strong style="color:#e5e5ea;">Murmur v1.2</strong> - run the installer after Python is set up.</li>
+                <li><strong style="color:#e5e5ea;">CUDA drivers</strong> (optional) - only needed if you have an NVIDIA GPU and want faster transcription.</li>
+              </ol>
+            </td>
+          </tr>
+
+          <!-- Windows buttons -->
+          <tr>
+            <td style="padding-bottom:8px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#2c2c2e;border:1px solid #3a3a3c;border-radius:10px;padding:12px 20px;">
+                    <a href="https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe" style="color:#C8922A;font-size:14px;font-weight:600;text-decoration:none;display:block;">① Download Python 3.11.9 →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:8px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#C8922A;border-radius:10px;padding:12px 20px;">
+                    <a href="https://murmurlabs.dev/downloads/Murmur-Setup-v1.2.exe" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;display:block;">② Download Murmur v1.2 →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:32px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#2c2c2e;border:1px solid #3a3a3c;border-radius:10px;padding:12px 20px;">
+                    <a href="https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_551.78_windows.exe" style="color:#aeaeb2;font-size:14px;font-weight:600;text-decoration:none;display:block;">③ Download CUDA 12.4.1 (optional, NVIDIA GPU only, ~3 GB) →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding-bottom:32px;">
+              <hr style="border:none;border-top:1px solid #3a3a3c;margin:0;"/>
+            </td>
+          </tr>
+
+          <!-- Shared test server -->
+          <tr>
+            <td style="padding-bottom:8px;">
+              <h2 style="margin:0;font-size:14px;font-weight:600;color:#C8922A;letter-spacing:0.5px;text-transform:uppercase;">No Whisper server? Use mine</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:16px;">
+              <p style="margin:0;font-size:15px;color:#aeaeb2;line-height:1.7;">
+                Don't have a machine to run Whisper on? You're welcome to connect to my server for testing. Enter the following in Murmur's Settings:
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:16px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="background:#2c2c2e;border:1px solid #3a3a3c;border-radius:10px;padding:16px 20px;">
+                    <p style="margin:0 0 8px;font-size:12px;color:#636366;text-transform:uppercase;letter-spacing:0.5px;">Server URL</p>
+                    <p style="margin:0 0 16px;font-size:14px;color:#e5e5ea;font-family:'Courier New',Courier,monospace;">https://murmer-lumen.ddns.net</p>
+                    <p style="margin:0 0 8px;font-size:12px;color:#636366;text-transform:uppercase;letter-spacing:0.5px;">API Key</p>
+                    <p style="margin:0;font-size:13px;color:#e5e5ea;font-family:'Courier New',Courier,monospace;word-break:break-all;">4be56a63b38709712707ae068b178571a6fa5516d49f57c745c50c1a04c6a645</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-bottom:32px;">
+              <p style="margin:0;font-size:13px;color:#636366;line-height:1.6;">
+                ⚠️ This server runs Whisper <strong style="color:#aeaeb2;">medium</strong> on a modest GPU — expect roughly <strong style="color:#aeaeb2;">10–20 seconds</strong> per transcription. That's slower than what you'd get on a modern GPU running a larger model, so treat it as a functional test, not a performance benchmark.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding-bottom:32px;">
+              <hr style="border:none;border-top:1px solid #3a3a3c;margin:0;"/>
+            </td>
+          </tr>
+
+          <!-- What to try -->
           <tr>
             <td style="padding-bottom:8px;">
               <h2 style="margin:0;font-size:14px;font-weight:600;color:#C8922A;letter-spacing:0.5px;text-transform:uppercase;">What to try</h2>
@@ -51,45 +194,18 @@
             <td style="padding-bottom:32px;">
               <ul style="margin:12px 0 0 0;padding-left:20px;color:#aeaeb2;font-size:15px;line-height:1.8;">
                 <li>Set your Whisper server URL in Settings</li>
-                <li>Hold the mic button to record, release to transcribe</li>
-                <li>Try dictating into different apps (WhatsApp, browser, notes)</li>
+                <li>Use the hotkey (or overlay button on Android) to record — release to transcribe</li>
+                <li>Try dictating into different apps (browser, notes, chat)</li>
                 <li>Enable AI Cleanup if you have an Anthropic API key</li>
               </ul>
             </td>
           </tr>
 
-          <!-- Divider -->
-          <tr>
-            <td style="padding-bottom:32px;">
-              <hr style="border:none;border-top:1px solid #3a3a3c;margin:0;"/>
-            </td>
-          </tr>
-
-          <!-- CTA -->
-          <tr>
-            <td style="padding-bottom:12px;">
-              <p style="margin:0;font-size:15px;color:#aeaeb2;line-height:1.7;">
-                Tap the button below on your Android device to join the test and install the app via Google Play:
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding-bottom:32px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:#C8922A;border-radius:10px;padding:14px 28px;">
-                    <a href="https://play.google.com/apps/internaltest/4700967536519018801" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:block;">Join the beta →</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Note -->
+          <!-- Feedback note -->
           <tr>
             <td style="padding-bottom:48px;">
               <p style="margin:0;font-size:13px;color:#636366;line-height:1.6;">
-                Requires Android 6.0 or higher. You'll need access to a Whisper transcription server to use the app — local or hosted. Any feedback is very welcome, just reply to this email.
+                Any feedback is very welcome — just reply to this email.
               </p>
             </td>
           </tr>
