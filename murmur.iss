@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define AppName      "Murmur"
-#define AppVersion   "1.2"
+#define AppVersion   "1.2.1"
 #define AppPublisher "R3PC0N"
 
 [Setup]
