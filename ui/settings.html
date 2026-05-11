@@ -328,6 +328,39 @@
 
   /* ── Capturing state ── */
   .capturing { color: var(--amber); font-style: italic; }
+
+  /* ── Danger Zone ── */
+  .danger-zone {
+    border: 1px solid oklch(60% 0.2 25 / 0.3);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .danger-zone-header {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    padding: 11px 14px; border: none; cursor: pointer;
+    background: oklch(60% 0.2 25 / 0.07);
+    color: var(--red);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    text-align: left;
+    transition: background 0.12s;
+  }
+  .danger-zone-header:hover { background: oklch(60% 0.2 25 / 0.14); }
+  .dz-chevron { margin-left: auto; transition: transform 0.15s; color: var(--red); opacity: 0.7; }
+  .danger-zone-header.open .dz-chevron { transform: rotate(180deg); }
+  .danger-zone-body {
+    padding: 14px;
+    border-top: 1px solid oklch(60% 0.2 25 / 0.2);
+    background: var(--bg-base);
+  }
+  .danger-warn {
+    font-size: 12px; color: var(--text-sec); line-height: 1.55;
+    background: oklch(60% 0.2 25 / 0.07);
+    border: 1px solid oklch(60% 0.2 25 / 0.2);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
 </style>
 <script>
   (function() {
@@ -489,6 +522,36 @@
           <div class="field-group">
             <div class="field-label">Anthropic API key</div>
             <input type="password" id="api-key" placeholder="sk-ant-...">
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Extra instructions</div>
+            <div class="field-sub">Added on top of the base prompt — e.g. "Always write in formal Dutch."</div>
+            <textarea id="cleanup-extra" rows="3" style="margin-top:6px" placeholder="e.g. Always use formal Dutch. Preserve all technical terms exactly."></textarea>
+          </div>
+
+          <div class="danger-zone">
+            <button class="danger-zone-header" id="danger-zone-btn" onclick="toggleDangerZone()">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1.5L12.5 11.5H1.5L7 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M7 6v2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                <circle cx="7" cy="10.2" r="0.65" fill="currentColor"/>
+              </svg>
+              Danger Zone
+              <svg class="dz-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="danger-zone-body" id="danger-zone-body" style="display:none">
+              <div class="danger-warn">
+                Editing the base system prompt increases the risk of bleed-through — the model reacting to the <em>content</em> of your transcription instead of cleaning it. Use "Restore defaults" to go back to the recommended prompt.
+              </div>
+              <div class="field-label" style="margin-bottom:6px">Base system prompt</div>
+              <textarea id="cleanup-base" rows="11"></textarea>
+              <div style="margin-top:10px">
+                <button class="btn-ghost btn-sm" onclick="restoreDefaultPrompt()">Restore defaults</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -718,6 +781,8 @@
     setToggle('toggle-ai', cfg.AI_CLEANUP_ENABLED);
     toggleValues['AI_CLEANUP_ENABLED'] = !!cfg.AI_CLEANUP_ENABLED;
     document.getElementById('api-key').value = cfg.ANTHROPIC_API_KEY || '';
+    document.getElementById('cleanup-extra').value = cfg.CLEANUP_EXTRA_INSTRUCTIONS || '';
+    document.getElementById('cleanup-base').value = cfg.CLEANUP_BASE_PROMPT || cfg.CLEANUP_DEFAULT_BASE_PROMPT || '';
 
     // Display
     setToggle('toggle-overlay', cfg.SHOW_OVERLAY);
@@ -755,6 +820,19 @@
     return result;
   }
 
+  // ── Danger Zone ────────────────────────────────────────────────────────────
+  function toggleDangerZone() {
+    const body = document.getElementById('danger-zone-body');
+    const btn  = document.getElementById('danger-zone-btn');
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : '';
+    btn.classList.toggle('open', !open);
+  }
+
+  function restoreDefaultPrompt() {
+    document.getElementById('cleanup-base').value = cfg.CLEANUP_DEFAULT_BASE_PROMPT || '';
+  }
+
   // ── Save ───────────────────────────────────────────────────────────────────
   async function save(restart) {
     const mode = cfg.TRANSCRIPTION_MODE || 'local';
@@ -768,7 +846,9 @@
       REMOTE_WHISPER_URL:     document.getElementById('remote-url').value.trim(),
       REMOTE_WHISPER_API_KEY: document.getElementById('remote-key').value.trim(),
       AI_CLEANUP_ENABLED:     'AI_CLEANUP_ENABLED' in toggleValues ? toggleValues['AI_CLEANUP_ENABLED'] : !!cfg.AI_CLEANUP_ENABLED,
-      ANTHROPIC_API_KEY:      document.getElementById('api-key').value.trim(),
+      ANTHROPIC_API_KEY:            document.getElementById('api-key').value.trim(),
+      CLEANUP_EXTRA_INSTRUCTIONS:   document.getElementById('cleanup-extra').value.trim(),
+      CLEANUP_BASE_PROMPT:          document.getElementById('cleanup-base').value.trim(),
       BEEP_ENABLED:           'BEEP_ENABLED' in toggleValues ? toggleValues['BEEP_ENABLED'] : !!cfg.BEEP_ENABLED,
       SHOW_OVERLAY:           'SHOW_OVERLAY' in toggleValues ? toggleValues['SHOW_OVERLAY'] : !!cfg.SHOW_OVERLAY,
       AUTO_START:             'AUTO_START' in toggleValues ? toggleValues['AUTO_START'] : !!cfg.AUTO_START,

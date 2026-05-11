@@ -28,6 +28,8 @@ _DEFAULTS: dict = {
     "TRANSCRIPTION_STYLE": "none",
     "CUSTOM_STYLE_PROMPT": "",
     "SAVED_SERVERS": [],
+    "CLEANUP_BASE_PROMPT": "",
+    "CLEANUP_EXTRA_INSTRUCTIONS": "",
 }
 
 # Non-configurable constants

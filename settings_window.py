@@ -5,6 +5,7 @@ from pathlib import Path
 import webview
 
 import autostart
+import cleaner
 import config
 from recorder import get_device_names
 from theme_utils import apply_title_bar_theme
@@ -37,7 +38,10 @@ class SettingsAPI:
             "TRANSCRIPTION_STYLE":    config.TRANSCRIPTION_STYLE,
             "CUSTOM_STYLE_PROMPT":    config.CUSTOM_STYLE_PROMPT,
             "USER_PROFILE":           config.USER_PROFILE,
-            "WORD_CORRECTIONS":       dict(config.WORD_CORRECTIONS),
+            "WORD_CORRECTIONS":            dict(config.WORD_CORRECTIONS),
+            "CLEANUP_BASE_PROMPT":         config.CLEANUP_BASE_PROMPT,
+            "CLEANUP_EXTRA_INSTRUCTIONS":  config.CLEANUP_EXTRA_INSTRUCTIONS,
+            "CLEANUP_DEFAULT_BASE_PROMPT": cleaner.DEFAULT_BASE_PROMPT,
         }
 
     def get_devices(self) -> list:
