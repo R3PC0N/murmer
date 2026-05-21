@@ -52,5 +52,12 @@ class SplashScreen:
 
     def hide(self):
         if self._window:
+            # Stop infinite CSS animations before hiding — on Linux, WebKitGTK
+            # does not pause rendering for hidden windows, so the animations keep
+            # driving the renderer at ~60 fps and peg a CPU core.
+            self._window.evaluate_js(
+                "document.querySelectorAll('.bar,.bar-fill')"
+                ".forEach(function(e){e.style.animation='none';});"
+            )
             self._window.hide()
             # Keep window alive to hold the webview event loop open
