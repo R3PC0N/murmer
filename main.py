@@ -648,7 +648,7 @@ def main():
         if sys.platform != "win32":
             from gi.repository import GLib, Gtk
             GLib.idle_add(
-                lambda: Gtk.Window.set_default_icon_from_file(_icon_path) or False
+                lambda: Gtk.Window.set_default_icon_from_file(_icon_path) and False
             )
         threading.Thread(target=_background_init, daemon=True).start()
 
