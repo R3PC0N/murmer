@@ -26,7 +26,7 @@ echo -e "${GREEN}✓ Python $PY_VERSION${NC}"
 # ── System packages ───────────────────────────────────────────────────────────
 echo ""
 echo "Installing system packages..."
-sudo apt-get update -qq
+sudo apt-get update -qq || true  # ignore broken third-party PPAs
 # Package names changed in Ubuntu 24.04
 if apt-cache show libgirepository-2.0-dev &>/dev/null 2>&1; then
     GI_DEV_PKG="libgirepository-2.0-dev"

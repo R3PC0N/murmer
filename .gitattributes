@@ -1,0 +1,4 @@
+* text=auto
+
+# Shell scripts must always use LF — CRLF breaks bash on Linux
+*.sh text eol=lf

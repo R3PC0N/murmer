@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Murmur — free, local voice dictation for Windows and Linux. Hold a key, speak, release.">
+    <title>Murmur — Free voice dictation</title>
+    <style>
+
+        /* ── Colour tokens ───────────────────────────────────────────────────── */
+
+        :root,
+        [data-theme="dark"] {
+            /* Dark — Noctua dark */
+            --bg:           #100B07;
+            --bg-raised:    #1A1109;
+            --surface:      #231810;
+            --border:       #3A2618;
+            --text:         #EDE0C4;
+            --muted:        #907055;
+            --subtle:       #5A3E28;
+            --accent:       #C8923A;
+            --accent-dim:   #A87530;
+            --accent-text:  #100B07;
+            --code-bg:      #0D0906;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg:           #F5EADA;
+                --bg-raised:    #EFE3CB;
+                --surface:      #E8D9BF;
+                --border:       #CDBF9F;
+                --text:         #1E1208;
+                --muted:        #7A5535;
+                --subtle:       #B89A72;
+                --accent:       #8B5820;
+                --accent-dim:   #7A4C18;
+                --accent-text:  #F5EADA;
+                --code-bg:      #E0D2B5;
+            }
+        }
+
+        [data-theme="light"] {
+            --bg:           #F5EADA;
+            --bg-raised:    #EFE3CB;
+            --surface:      #E8D9BF;
+            --border:       #CDBF9F;
+            --text:         #1E1208;
+            --muted:        #7A5535;
+            --subtle:       #B89A72;
+            --accent:       #8B5820;
+            --accent-dim:   #7A4C18;
+            --accent-text:  #F5EADA;
+            --code-bg:      #E0D2B5;
+        }
+
+        /* ── Reset ───────────────────────────────────────────────────────────── */
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        code {
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: 0.82em;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.1em 0.4em;
+        }
+
+        /* ── Waveform logo ───────────────────────────────────────────────────── */
+
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 56px;
+            margin-bottom: 1.75rem;
+        }
+
+        .waveform .bar {
+            width: 7px;
+            border-radius: 4px;
+            background: var(--accent);
+            animation: wave 2s ease-in-out infinite;
+        }
+
+        /* Heights define the waveform shape; animation breathes them */
+        .waveform .bar:nth-child(1) { height: 14px; animation-delay: 0.00s; }
+        .waveform .bar:nth-child(2) { height: 26px; animation-delay: 0.18s; }
+        .waveform .bar:nth-child(3) { height: 40px; animation-delay: 0.36s; }
+        .waveform .bar:nth-child(4) { height: 52px; animation-delay: 0.54s; }
+        .waveform .bar:nth-child(5) { height: 40px; animation-delay: 0.36s; }
+        .waveform .bar:nth-child(6) { height: 26px; animation-delay: 0.18s; }
+        .waveform .bar:nth-child(7) { height: 14px; animation-delay: 0.00s; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+            50%       { transform: scaleY(1);   opacity: 1;   }
+        }
+
+        /* ── Hero ────────────────────────────────────────────────────────────── */
+
+        .hero {
+            min-height: 100svh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 1.5rem 5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(3.5rem, 14vw, 7.5rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .hero .tagline {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: var(--muted);
+            max-width: 420px;
+            margin-bottom: 2.5rem;
+        }
+
+        .hero .tagline strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* ── Buttons ─────────────────────────────────────────────────────────── */
+
+        .buttons {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.7rem 1.5rem;
+            border-radius: 9px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: filter 0.15s ease, transform 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn:hover { filter: brightness(1.12); transform: translateY(-2px); text-decoration: none; }
+        .btn:active { transform: translateY(0); }
+
+        .btn-primary  { background: var(--accent); color: var(--accent-text); }
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* ── Divider ─────────────────────────────────────────────────────────── */
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0 auto;
+            max-width: 920px;
+        }
+
+        /* ── Sections ────────────────────────────────────────────────────────── */
+
+        .section {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 5rem 1.5rem;
+        }
+
+        .section-title {
+            font-size: clamp(1.4rem, 3vw, 1.75rem);
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-align: center;
+            margin-bottom: 2.75rem;
+        }
+
+        /* ── Feature cards ───────────────────────────────────────────────────── */
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+        .card:hover { border-color: var(--accent-dim); }
+
+        .card-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.7rem;
+            line-height: 1;
+        }
+
+        .card h3 {
+            font-size: 0.975rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .card p {
+            font-size: 0.865rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        /* ── Install blocks ──────────────────────────────────────────────────── */
+
+        .install-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem;
+        }
+
+        @media (max-width: 600px) {
+            .install-grid { grid-template-columns: 1fr; }
+        }
+
+        .install-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .install-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .install-card pre {
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: 0.78rem;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.9rem 1.1rem;
+            overflow-x: auto;
+            color: var(--text);
+            line-height: 1.7;
+            flex: 1;
+        }
+
+        .install-card .note {
+            font-size: 0.8rem;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        /* ── Footer ──────────────────────────────────────────────────────────── */
+
+        footer {
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+            color: var(--subtle);
+            font-size: 0.83rem;
+        }
+
+        footer a { color: var(--subtle); transition: color 0.15s; }
+        footer a:hover { color: var(--muted); text-decoration: none; }
+
+        .sep { margin: 0 0.55rem; }
+
+        /* ── Theme toggle ────────────────────────────────────────────────────── */
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.15s, color 0.15s, transform 0.15s;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-dim);
+            color: var(--accent);
+            transform: scale(1.08);
+        }
+
+    </style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode" title="Toggle light/dark mode"></button>
+
+<!-- ══ Hero ═══════════════════════════════════════════════════════════════════ -->
+
+<section class="hero">
+
+    <div class="waveform" aria-hidden="true">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+
+    <h1>Murmur</h1>
+
+    <p class="tagline">
+        Free, local voice dictation for Windows and Linux.<br>
+        <strong>Hold a key. Speak. Release.</strong>
+    </p>
+
+    <div class="buttons">
+        <a class="btn btn-primary" href="https://github.com/R3PC0N/murmur/releases/download/v1.1/Murmer-Setup-v1.1.exe">
+            ↓&nbsp; Download for Windows
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/R3PC0N/murmur">
+            GitHub &rarr;
+        </a>
+    </div>
+
+</section>
+
+<hr class="divider">
+
+<!-- ══ Features ═══════════════════════════════════════════════════════════════ -->
+
+<div class="section">
+    <h2 class="section-title">Everything you need. Nothing you don't.</h2>
+
+    <div class="feature-grid">
+
+        <div class="card">
+            <div class="card-icon">🎙️</div>
+            <h3>Push-to-talk</h3>
+            <p>Hold any configurable key to record. Release to transcribe and paste instantly into whatever app is focused.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">🔒</div>
+            <h3>Fully local</h3>
+            <p>Runs OpenAI Whisper entirely on your own GPU or CPU. Your audio never leaves your machine.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">✨</div>
+            <h3>AI cleanup</h3>
+            <p>Optional Claude Haiku pass removes filler words, fixes punctuation, and preserves your language and tone.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">🌐</div>
+            <h3>Remote transcription</h3>
+            <p>Offload to a powerful machine on your network. Works over LAN, Tailscale, or a reverse proxy with HTTPS.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">🐧</div>
+            <h3>Windows &amp; Linux</h3>
+            <p>Single <code>.exe</code> installer for Windows. One setup script handles everything on Ubuntu, Debian, and Zorin OS.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">⚡</div>
+            <h3>Free &amp; open source</h3>
+            <p>MIT licensed. No subscription, no account, no telemetry. Download, run, done.</p>
+        </div>
+
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ══ Install ════════════════════════════════════════════════════════════════ -->
+
+<div class="section">
+    <h2 class="section-title">Get started in minutes.</h2>
+
+    <div class="install-grid">
+
+        <div class="install-card">
+            <h3>🪟 Windows</h3>
+            <pre>1. Install Python 3.10+ from python.org
+   Tick "Add Python to PATH" during setup
+2. Download and run Murmur-Setup-vX.X.exe
+3. Add your Anthropic API key to .env
+   (optional — AI cleanup only)
+4. Hold F9 anywhere and start dictating</pre>
+            <div>
+                <a class="btn btn-primary" href="https://www.python.org/ftp/python/pymanager/python-manager-26.1.msix">
+                    ↓&nbsp; Download latest Python installer
+                </a>
+            </div>
+        </div>
+
+        <div class="install-card">
+            <h3>🐧 Linux &mdash; Ubuntu / Debian / Zorin OS</h3>
+            <pre>git clone https://github.com/R3PC0N/murmur.git
+cd murmur
+bash setup_linux.sh
+./murmur.sh</pre>
+            <p class="note">
+                The setup script installs all system packages, creates a virtual environment,
+                and enables the AppIndicator extension for the system tray.
+                Log out once after setup for the global hotkey to take effect.
+            </p>
+        </div>
+
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ══ Footer ════════════════════════════════════════════════════════════════ -->
+
+<footer>
+    <p>
+        <a href="https://github.com/R3PC0N/murmur">GitHub</a>
+        <span class="sep">&middot;</span>
+        MIT License
+        <span class="sep">&middot;</span>
+        <a href="https://murmurlabs.dev">murmurlabs.dev</a>
+    </p>
+</footer>
+
+<script>
+    (function () {
+        var STORAGE_KEY = 'murmur-theme';
+        var SUN = '☀️';
+        var MOON = '🌙';
+
+        function getSystemPreference() {
+            return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            var btn = document.getElementById('themeToggle');
+            if (btn) btn.textContent = theme === 'dark' ? SUN : MOON;
+        }
+
+        // Apply saved or system theme immediately (before paint)
+        var saved = localStorage.getItem(STORAGE_KEY);
+        applyTheme(saved || getSystemPreference());
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var btn = document.getElementById('themeToggle');
+            btn.addEventListener('click', function () {
+                var current = document.documentElement.getAttribute('data-theme') || getSystemPreference();
+                var next = current === 'dark' ? 'light' : 'dark';
+                localStorage.setItem(STORAGE_KEY, next);
+                applyTheme(next);
+            });
+
+            // Keep in sync if system preference changes and user hasn't overridden
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+                if (!localStorage.getItem(STORAGE_KEY)) {
+                    applyTheme(getSystemPreference());
+                }
+            });
+        });
+    })();
+</script>
+
+</body>
+</html>
