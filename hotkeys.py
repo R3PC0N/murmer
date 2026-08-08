@@ -4,11 +4,12 @@ import shutil
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import uuid
 from collections.abc import Callable, Mapping
 from pathlib import Path
+
+import app_paths
 
 
 class HotkeyError(RuntimeError):
@@ -236,8 +237,8 @@ class HyprlandHotkeyBackend:
         self.on_press = on_press
         self.on_release = on_release
         self.token = uuid.uuid4().hex[:8]
-        runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir()))
-        self.socket_path = runtime_dir / f"murmur-hotkey-{os.getpid()}-{self.token}.sock"
+        runtime_dir = app_paths.runtime_directory()
+        self.socket_path = runtime_dir / f"hotkey-{os.getpid()}-{self.token}.sock"
         self._socket = None
         self._thread = None
         self._stop_event = threading.Event()

@@ -1,4 +1,5 @@
 main.py
+app_paths.py
 config.py
 recorder.py
 transcriber.py

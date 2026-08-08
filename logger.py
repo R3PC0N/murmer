@@ -4,6 +4,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import app_paths
+
 # Levels:
 #   DEBUG       — system messages (loading, settings, hotkey, etc.)
 #   RESULT      — final transcription output (shown in compact mode, saved to history)
@@ -11,11 +13,13 @@ from pathlib import Path
 
 if sys.platform == "win32":
     _LOG_DIR = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Murmur"
+    _HISTORY_FILE = _LOG_DIR / "history.log"
+    _STARTUP_LOG = _LOG_DIR / "startup.log"
 else:
-    _LOG_DIR = Path.home() / ".local" / "share" / "Murmur"
+    _XDG_PATHS = app_paths.linux_paths()
+    _HISTORY_FILE = _XDG_PATHS.data / "history.log"
+    _STARTUP_LOG = _XDG_PATHS.state / "startup.log"
 
-_HISTORY_FILE = _LOG_DIR / "history.log"
-_STARTUP_LOG   = _LOG_DIR / "startup.log"
 _startup_fresh  = True  # overwrite on first write each run
 _buffer: list[tuple[str, str, str]] = []  # (timestamp, level, message)
 _callbacks: list = []
@@ -41,6 +45,7 @@ def _write_history(ts: str, message: str):
         date = datetime.now().strftime("%Y-%m-%d")
         with open(_HISTORY_FILE, "a", encoding="utf-8") as f:
             f.write(f"[{date} {ts}] {message}\n")
+        _HISTORY_FILE.chmod(0o600)
     except Exception:
         pass
 
@@ -79,12 +84,13 @@ def open_history():
 def log_startup(msg: str):
     global _startup_fresh
     try:
-        _LOG_DIR.mkdir(parents=True, exist_ok=True)
+        _STARTUP_LOG.parent.mkdir(parents=True, exist_ok=True)
         mode = "w" if _startup_fresh else "a"
         _startup_fresh = False
         ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
         with open(_STARTUP_LOG, mode, encoding="utf-8") as f:
             f.write(f"[{ts}] {msg}\n")
+        _STARTUP_LOG.chmod(0o600)
     except Exception:
         pass
 
@@ -108,4 +114,10 @@ def open_startup_log():
         if _STARTUP_LOG.exists():
             subprocess.Popen(["xdg-open", str(_STARTUP_LOG)])
         else:
-            subprocess.Popen(["xdg-open", str(_LOG_DIR)])
+            subprocess.Popen(["xdg-open", str(_STARTUP_LOG.parent)])
+
+
+def initialize_storage():
+    """Migrate legacy Linux history and diagnostics without deleting them."""
+    if sys.platform != "win32":
+        app_paths.initialize_linux_logs()

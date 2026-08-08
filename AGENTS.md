@@ -13,7 +13,7 @@ Murmur is an existing cross-platform Python desktop application for push-to-talk
 - `recorder.py` records through `sounddevice`/PortAudio and enumerates input devices.
 - `transcriber.py` uses faster-whisper locally or sends WAV audio to a configured remote HTTP server. `cleaner.py` optionally cleans transcription text with Anthropic.
 - `server/faster_whisper_server.py` is the FastAPI transcription server; server dependencies and service examples live under `server/`.
-- `config.py` loads defaults, `.env`, and `settings.json`. Mutable settings are currently source-relative; see the filesystem policy below before extending this pattern.
+- `config.py` loads defaults, `.env`, and `settings.json`. On Linux, `app_paths.py` places mutable client configuration and state under XDG locations and imports legacy source-relative files without deleting them. Windows paths remain unchanged.
 - `paster.py` selects Windows, Linux/X11, or Linux/Wayland text insertion. Windows uses clipboard plus simulated paste, X11 uses `xdotool`, and the tested Wayland backend uses `wtype`.
 - `hotkeys.py` selects the global-hotkey backend. Windows uses `keyboard`, Linux/X11 uses `pynput`, and Hyprland/native Wayland uses temporary compositor runtime bindings through `hyprctl`. Other native-Wayland compositors receive a clear unsupported-backend error rather than an X11 fallback.
 - `autostart.py` uses the Windows registry or an XDG autostart desktop file. The portable Linux bootstrap installs the visible XDG application entry and icon.
@@ -52,9 +52,9 @@ Report workstation-level dependencies clearly so they can be recorded separately
 
 ## Filesystem and state policy
 
-Current behavior stores `settings.json`, `.env`, server credentials, and some runtime artifacts relative to the source tree. Do not treat that as the desired long-term Linux architecture.
+Linux client settings, AI-cleanup configuration, history, diagnostics, locks, sockets, and temporary runtime artifacts use the appropriate XDG configuration, data, state, and runtime locations through `app_paths.py`. Legacy source-relative client configuration and the former `~/.local/share/Murmur` logs are imported without deletion when the XDG destination is absent. Keep application source separate from mutable user state, preserve migration compatibility, and do not bypass the central path helper.
 
-New or migrated Linux paths should generally use the appropriate XDG configuration, data, state, cache, and runtime locations. Keep application source separate from mutable user state. Any migration must preserve existing settings and users where compatibility requires it; clearly distinguish migration policy from behavior that has already been implemented.
+The optional server still manages its own credentials under `server/`; do not silently treat server deployment state as client XDG state. Windows paths and behavior remain unchanged.
 
 ## Dependencies
 

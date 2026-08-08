@@ -2,12 +2,18 @@ import os
 import sys
 from pathlib import Path
 
+import app_paths
+
 _APP_NAME = "Murmur"
 
 
 def _command() -> str:
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")
     return f'"{sys.executable}" "{script}"'
+
+
+def _linux_desktop_file(environ=None, home=None) -> Path:
+    return app_paths.linux_paths(environ=environ, home=home).config.parent / "autostart/murmur.desktop"
 
 
 # ── Windows (registry) ────────────────────────────────────────────────────────
@@ -39,8 +45,8 @@ if sys.platform == "win32":
 # ── Linux (XDG autostart .desktop file) ──────────────────────────────────────
 
 else:
-    _DESKTOP_DIR = Path.home() / ".config" / "autostart"
-    _DESKTOP_FILE = _DESKTOP_DIR / "murmur.desktop"
+    _DESKTOP_FILE = _linux_desktop_file()
+    _DESKTOP_DIR = _DESKTOP_FILE.parent
 
     def is_enabled() -> bool:
         return _DESKTOP_FILE.exists()

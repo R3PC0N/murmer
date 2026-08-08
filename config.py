@@ -1,12 +1,17 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+import app_paths
 
-_SETTINGS_FILE = Path(__file__).parent / "settings.json"
+_SOURCE_DIR = Path(__file__).parent
+_SETTINGS_FILE, _ENV_FILE, _LEGACY_SETTINGS_FILE, _LEGACY_ENV_FILE = (
+    app_paths.config_files(_SOURCE_DIR)
+)
+load_dotenv(_ENV_FILE if _ENV_FILE.exists() else _LEGACY_ENV_FILE)
 
 _DEFAULTS: dict = {
     "PUSH_TO_TALK_KEY": "f9",
@@ -49,8 +54,9 @@ def uses_default_whisper_runtime() -> bool:
 
 def _load() -> dict:
     data = dict(_DEFAULTS)
-    if _SETTINGS_FILE.exists():
-        with open(_SETTINGS_FILE) as f:
+    settings_file = _SETTINGS_FILE if _SETTINGS_FILE.exists() else _LEGACY_SETTINGS_FILE
+    if settings_file.exists():
+        with open(settings_file) as f:
             data.update(json.load(f))
     env_key = os.getenv("ANTHROPIC_API_KEY")
     if env_key:
@@ -64,9 +70,21 @@ def save(updates: dict):
     # Don't persist the API key to disk if it came from .env
     if os.getenv("ANTHROPIC_API_KEY"):
         current.pop("ANTHROPIC_API_KEY", None)
-    with open(_SETTINGS_FILE, "w") as f:
-        json.dump(current, f, indent=2)
+    serialized = json.dumps(current, indent=2)
+    if sys.platform == "win32":
+        with open(_SETTINGS_FILE, "w") as f:
+            f.write(serialized)
+    else:
+        app_paths.atomic_write_text(_SETTINGS_FILE, serialized)
     _apply(current)
+
+
+def initialize_storage():
+    """Migrate legacy Linux config once and refresh effective settings."""
+    if sys.platform != "win32":
+        app_paths.initialize_linux_config(_SOURCE_DIR)
+        load_dotenv(_ENV_FILE, override=False)
+        _apply(_load())
 
 
 def _apply(data: dict):

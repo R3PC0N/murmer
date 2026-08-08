@@ -92,7 +92,10 @@ bindrd
 
 class HyprlandBackendTests(unittest.TestCase):
     def make_backend(self):
-        with patch.dict("os.environ", {"XDG_RUNTIME_DIR": "/tmp"}):
+        with patch(
+            "hotkeys.app_paths.runtime_directory",
+            return_value=hotkeys.Path("/tmp/murmur-test-runtime"),
+        ):
             return hotkeys.HyprlandHotkeyBackend("f8", Mock(), Mock())
 
     def test_existing_binding_is_reported_without_unbinding_it(self):

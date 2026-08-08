@@ -12,6 +12,7 @@ import webview
 from PIL import Image, ImageDraw
 
 import config
+import app_paths
 import hotkeys
 import logger
 from log_window import LogWindow
@@ -62,9 +63,9 @@ def _build_transparent_ico() -> str:
         images[0].save(tmp.name, format="ICO", append_images=images[1:],
                        sizes=[(s, s) for s in sizes])
     else:
-        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-        tmp.close()
-        images[-1].save(tmp.name, format="PNG")  # use the largest size (256px)
+        icon_path = app_paths.runtime_directory() / f"window-icon-{os.getpid()}.png"
+        images[-1].save(icon_path, format="PNG")  # use the largest size (256px)
+        return str(icon_path)
     return tmp.name
 
 
@@ -97,8 +98,8 @@ def _ensure_single_instance():
         if ctypes.windll.kernel32.GetLastError() == 183:
             sys.exit(0)
     else:
-        import fcntl, tempfile
-        lock_path = Path(tempfile.gettempdir()) / "murmur.lock"
+        import fcntl
+        lock_path = app_paths.instance_lock_path()
         _lock_file = open(lock_path, "w")
         try:
             fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -511,6 +512,9 @@ def _background_init():
 def main():
     global settings_win, log_win, server_manager_win, splash
 
+    config.initialize_storage()
+    logger.initialize_storage()
+
     if sys.platform != "win32":
         from gi.repository import GLib
         GLib.set_prgname("murmur")
@@ -549,7 +553,14 @@ def main():
             )
         threading.Thread(target=_background_init, daemon=True).start()
 
-    webview.start(func=_on_start, icon=_icon_path, debug=False)
+    try:
+        webview.start(func=_on_start, icon=_icon_path, debug=False)
+    finally:
+        if sys.platform != "win32":
+            try:
+                Path(_icon_path).unlink()
+            except FileNotFoundError:
+                pass
 
 
 if __name__ == "__main__":

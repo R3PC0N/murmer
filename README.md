@@ -138,7 +138,10 @@ Start Murmur:
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-**Linux:** open `.env` in the Murmur folder and add the same line.
+**Linux:** open `$XDG_CONFIG_HOME/murmur/.env` (normally
+`~/.config/murmur/.env`) and add the same line. The Linux bootstrap creates this
+file; existing source-tree `.env` values are imported on first startup and the
+legacy file is retained as a backup.
 
 Or enter it directly in **Settings → AI Cleanup**.
 

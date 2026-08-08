@@ -47,15 +47,7 @@ fi
 
 .venv/bin/python linux_bootstrap.py install-desktop \
     --app-dir "$SCRIPT_DIR" --python "$SCRIPT_DIR/.venv/bin/python"
-
-if [ ! -f .env ]; then
-    if [ -f .env.example ]; then
-        cp .env.example .env
-    else
-        printf 'ANTHROPIC_API_KEY=\n' > .env
-    fi
-    echo "Created optional AI-cleanup configuration: $SCRIPT_DIR/.env"
-fi
+.venv/bin/python linux_bootstrap.py install-config --app-dir "$SCRIPT_DIR"
 
 cat > murmur.sh <<'EOF'
 #!/bin/bash

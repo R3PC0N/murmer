@@ -9,6 +9,8 @@ import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
+import app_paths
+
 
 def detect_session(environ: Mapping[str, str] | None = None) -> tuple[str, bool]:
     environ = os.environ if environ is None else environ
@@ -126,6 +128,15 @@ def install_desktop_entry(app_dir: Path, python: Path, environ=None) -> Path:
     return desktop_file
 
 
+def install_config(app_dir: Path) -> Path:
+    paths = app_paths.initialize_linux_config(app_dir)
+    app_paths.ensure_private_directory(paths.config)
+    env_file = paths.config / ".env"
+    if not env_file.exists():
+        app_paths.migrate_file(app_dir / ".env.example", env_file)
+    return paths.config
+
+
 def check() -> int:
     missing = _check_python_capabilities()
     missing.extend(missing_executables())
@@ -148,12 +159,16 @@ def check() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("check", "install-desktop"))
+    parser.add_argument("command", choices=("check", "install-config", "install-desktop"))
     parser.add_argument("--app-dir", type=Path, default=Path(__file__).parent)
     parser.add_argument("--python", type=Path, default=Path(sys.executable))
     args = parser.parse_args()
     if args.command == "check":
         return check()
+    if args.command == "install-config":
+        config_dir = install_config(args.app_dir.resolve())
+        print(f"Configuration directory prepared: {config_dir}")
+        return 0
     desktop_file = install_desktop_entry(args.app_dir.resolve(), args.python)
     print(f"Desktop entry installed: {desktop_file}")
     return 0
