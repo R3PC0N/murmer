@@ -10,6 +10,12 @@ class TextInsertionError(RuntimeError):
     """Raised when text could not be inserted into the focused application."""
 
 
+_WAYLAND_CHUNK_SIZE = 64
+_WAYLAND_KEY_DELAY_MS = 5
+_WAYLAND_CHUNK_PAUSE_SECONDS = 0.2
+_WAYLAND_PUNCTUATION_BOUNDARIES = frozenset(".,;:!?…")
+
+
 def detect_backend(
     platform: str | None = None,
     environ: Mapping[str, str] | None = None,
@@ -95,14 +101,53 @@ def _paste_x11(text: str):
     )
 
 
+def _chunk_wayland_text(
+    text: str, max_chars: int = _WAYLAND_CHUNK_SIZE
+) -> list[str]:
+    if max_chars <= 0:
+        raise ValueError("max_chars must be greater than zero")
+    if not text:
+        return [text]
+
+    chunks = []
+    start = 0
+    while len(text) - start > max_chars:
+        hard_end = start + max_chars
+        split_at = None
+
+        for index in range(hard_end - 1, start, -1):
+            if text[index].isspace():
+                split_at = index + 1
+                break
+
+        if split_at is None:
+            for index in range(hard_end - 1, start, -1):
+                if text[index] in _WAYLAND_PUNCTUATION_BOUNDARIES:
+                    split_at = index + 1
+                    break
+
+        split_at = split_at or hard_end
+        chunks.append(text[start:split_at])
+        start = split_at
+
+    chunks.append(text[start:])
+    return chunks
+
+
 def _paste_wayland(text: str):
-    # wtype defaults to no delay, which can make compositors or applications
-    # drop rapid key events (especially shifted punctuation). Stdin keeps text
-    # literal and avoids command-line length limits. Tabs are normalized because
-    # a real Tab key commonly changes focus instead of inserting indentation.
+    # Long streams from one wtype process can lose virtual-keyboard events under
+    # Hyprland. Short processes with a reset pause proved reliable in live tests.
+    # Stdin keeps text literal and shell-safe. Tabs are normalized because a real
+    # Tab key commonly changes focus instead of inserting indentation.
     wtype = _require_executable("wtype")
     literal_text = text.replace("\t", "    ")
-    _run_text_command([wtype, "-d", "5", "-"], literal_text, "Wayland")
+    chunks = _chunk_wayland_text(literal_text)
+    for index, chunk in enumerate(chunks):
+        _run_text_command(
+            [wtype, "-d", str(_WAYLAND_KEY_DELAY_MS), "-"], chunk, "Wayland"
+        )
+        if index < len(chunks) - 1:
+            time.sleep(_WAYLAND_CHUNK_PAUSE_SECONDS)
 
 
 def paste_text(text: str):

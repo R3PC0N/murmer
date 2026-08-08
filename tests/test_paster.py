@@ -1,6 +1,6 @@
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import paster
 
@@ -62,6 +62,82 @@ class CommandTests(unittest.TestCase):
             check=False,
         )
 
+    def test_wayland_chunking_prefers_whitespace_without_changing_text(self):
+        text = "alpha beta, gamma delta\nHé — € ñ 中文 punctuation! final"
+
+        chunks = paster._chunk_wayland_text(text, max_chars=18)
+
+        self.assertEqual(
+            chunks,
+            ["alpha beta, gamma ", "delta\nHé — € ñ 中文 ", "punctuation! final"],
+        )
+        self.assertEqual("".join(chunks), text)
+        self.assertTrue(all(len(chunk) <= 18 for chunk in chunks))
+
+    def test_wayland_chunking_uses_punctuation_then_hard_boundary(self):
+        punctuated = "abcdefghij,klmnopqrst"
+        unbroken = "abcdefghijklmnopqrstuvwxyz"
+
+        punctuation_chunks = paster._chunk_wayland_text(punctuated, max_chars=12)
+        hard_chunks = paster._chunk_wayland_text(unbroken, max_chars=10)
+
+        self.assertEqual(punctuation_chunks[0], "abcdefghij,")
+        self.assertEqual("".join(punctuation_chunks), punctuated)
+        self.assertEqual(hard_chunks, ["abcdefghij", "klmnopqrst", "uvwxyz"])
+
+    @patch("paster.time.sleep")
+    @patch("paster.subprocess.run")
+    @patch("paster.shutil.which", return_value="/usr/bin/wtype")
+    def test_long_wayland_text_uses_sequential_literal_chunks(
+        self, _which, run, sleep
+    ):
+        run.return_value = subprocess.CompletedProcess([], 0, "", "")
+        text = (
+            "Dit is een langere Nederlandse test, met punctuation; Unicode € ñ 中文, "
+            "een newline\nen shell-achtige tekst: $HOME $(echo raw).\tEinde."
+        )
+        normalized = text.replace("\t", "    ")
+        expected_chunks = paster._chunk_wayland_text(normalized)
+
+        paster._paste_wayland(text)
+
+        self.assertGreater(len(expected_chunks), 1)
+        self.assertEqual("".join(expected_chunks), normalized)
+        self.assertEqual(
+            run.call_args_list,
+            [
+                call(
+                    ["/usr/bin/wtype", "-d", "5", "-"],
+                    input=chunk,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                for chunk in expected_chunks
+            ],
+        )
+        self.assertEqual(
+            sleep.call_args_list,
+            [call(paster._WAYLAND_CHUNK_PAUSE_SECONDS)]
+            * (len(expected_chunks) - 1),
+        )
+
+    @patch("paster.time.sleep")
+    @patch("paster.subprocess.run")
+    @patch("paster.shutil.which", return_value="/usr/bin/wtype")
+    def test_wayland_chunk_failure_stops_later_chunks(self, _which, run, sleep):
+        run.side_effect = [
+            subprocess.CompletedProcess([], 0, "", ""),
+            subprocess.CompletedProcess([], 2, "", "chunk failed"),
+        ]
+        text = "first chunk words " * 12
+
+        with self.assertRaisesRegex(paster.TextInsertionError, "chunk failed"):
+            paster._paste_wayland(text)
+
+        self.assertEqual(run.call_count, 2)
+        sleep.assert_called_once_with(paster._WAYLAND_CHUNK_PAUSE_SECONDS)
+
     def test_missing_wayland_executable_has_a_clear_error(self):
         with patch("paster.shutil.which", return_value=None):
             with self.assertRaisesRegex(paster.TextInsertionError, "wtype.*not found"):
@@ -78,17 +154,13 @@ class CommandTests(unittest.TestCase):
         run.return_value = subprocess.CompletedProcess(
             ["/usr/bin/wtype", "-d", "5", "-"], 0, "", ""
         )
-        text = "Shell: $(nothing); $HOME && echo 'nope'\nHé — € ñ 中文\nTabbed:\tafter"
+        text = "Shell: $HOME; $(raw)\nHé € 中文\tend"
 
         paster._paste_wayland(text)
 
         run.assert_called_once_with(
             ["/usr/bin/wtype", "-d", "5", "-"],
-            input=(
-                "Shell: $(nothing); $HOME && echo 'nope'\n"
-                "Hé — € ñ 中文\n"
-                "Tabbed:    after"
-            ),
+            input="Shell: $HOME; $(raw)\nHé € 中文    end",
             text=True,
             capture_output=True,
             check=False,
@@ -102,6 +174,22 @@ class CommandTests(unittest.TestCase):
         paster._paste_wayland("one\t\ttwo\nthree")
 
         self.assertEqual(run.call_args.kwargs["input"], "one        two\nthree")
+
+    @patch("paster._paste_x11")
+    @patch("paster.detect_backend", return_value="x11")
+    def test_paste_text_keeps_x11_dispatch_unchanged(self, _detect, paste_x11):
+        paster.paste_text("exact text")
+
+        paste_x11.assert_called_once_with("exact text")
+
+    @patch("paster._paste_windows")
+    @patch("paster.detect_backend", return_value="windows")
+    def test_paste_text_keeps_windows_dispatch_unchanged(
+        self, _detect, paste_windows
+    ):
+        paster.paste_text("exact text")
+
+        paste_windows.assert_called_once_with("exact text")
 
     @patch("paster.subprocess.run")
     @patch("paster.shutil.which", return_value="/usr/bin/xdotool")
