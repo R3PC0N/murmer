@@ -1,4 +1,5 @@
-# Creates dist/murmur-linux-<version>.zip for Linux distribution.
+# Creates dist/murmur-linux-<version>.zip using linux_runtime_files.txt for
+# project runtime modules and explicit support/UI/server file lists below.
 # Upload the zip and murmur-install.sh to murmurlabs.dev/downloads/ via FileZilla.
 #
 # Usage: .\build_linux_zip.ps1

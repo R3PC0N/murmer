@@ -28,11 +28,21 @@ No subscription. No cloud. Your audio never leaves your machine - unless you cho
 
 ## Requirements
 
+### Linux support matrix
+
+| Session | Text insertion | Global push-to-talk | Status |
+|---|---|---|---|
+| Arch/Omarchy, Hyprland/native Wayland | `wtype` | Temporary `hyprctl` press/release bindings | Live-tested with Python 3.14.6 |
+| Linux/X11 | `xdotool` | `pynput` | Supported compatibility path |
+| Other native-Wayland compositors | `wtype` | No supported backend yet | Text insertion is available, but the normal push-to-talk workflow is not fully supported |
+
+Debian and Ubuntu prerequisites are documented below. Native-Wayland global hotkeys should only be considered fully supported on Hyprland today. XWayland's `DISPLAY` may coexist with a native Wayland session; Murmur correctly prefers its Wayland backends in that case.
+
 ### Windows
 
 | Dependency | Version | Download |
 |---|---|---|
-| **Python** | 3.10 or newer | [python.org/downloads](https://www.python.org/downloads/) |
+| **Python** | 3.10–3.13 for the current installer | [python.org/downloads](https://www.python.org/downloads/) |
 
 > ⚠ During Python installation, tick **"Add Python to PATH"**.
 
@@ -108,6 +118,8 @@ The script runs as your normal user. It creates `.venv` with access to system GT
 
 Native Wayland text insertion requires `wtype`. Hyprland push-to-talk uses temporary `hyprctl` runtime bindings and does not require membership in the `input` group. X11 sessions use `xdotool` instead.
 
+After setup, Murmur appears in normal XDG application launchers such as Walker. Optional **Start with System** behavior uses a separate XDG autostart entry. A StatusNotifier/AppIndicator host must be running for the tray icon to be visible.
+
 Start Murmur:
 
 ```bash
@@ -136,6 +148,23 @@ Murmur starts in the system tray. Hold **F9** anywhere, speak, release. The tran
 
 The hotkey can be changed in **Settings → General**.
 
+### Push-to-talk backends
+
+- **Windows:** the existing `keyboard`-based Windows backend.
+- **Linux/X11:** `pynput` listens for the configured key.
+- **Hyprland/Wayland:** Murmur registers temporary press and release bindings through `hyprctl` and relays those events to the running process. It does not permanently edit Hyprland configuration.
+- **Other native-Wayland compositors:** Murmur reports that no supported global-hotkey backend is available instead of attempting an unreliable X11 fallback.
+
+On Hyprland, Settings offers F1–F12 and marks keys already owned by another compositor binding. Murmur will not silently replace a conflicting binding. A desktop or distribution may already use F9, so choose any key shown as available.
+
+### Text insertion backends
+
+- **Windows:** Murmur temporarily writes the transcription to the clipboard and simulates paste, then restores the previous clipboard content.
+- **Linux/X11:** `xdotool` types directly into the focused application.
+- **Linux/Wayland:** `wtype` receives literal Unicode text through standard input. Murmur uses a small typing delay for reliability and normalizes tabs to four spaces because a real Tab key often changes focus.
+
+Wayland is selected when `WAYLAND_DISPLAY` is present even if XWayland also provides `DISPLAY`.
+
 ---
 
 ## Settings overview
@@ -150,6 +179,16 @@ Open Settings from the tray icon (right-click → Settings).
 | **AI Cleanup** | Enable/disable Claude Haiku, Anthropic API key |
 | **Display** | Recording overlay, sound feedback |
 | **Profile** | Transcription style, user context, word corrections |
+
+### Transcription language
+
+The language selector applies to local faster-whisper transcription and updated bundled Murmur servers:
+
+- **Automatic** passes no fixed language and uses Whisper's language detection.
+- **Dutch** explicitly selects Whisper language code `nl`.
+- **English** explicitly selects Whisper language code `en`.
+
+Older remote servers that predate the optional language field continue to use automatic detection.
 
 ### Word corrections
 
@@ -183,7 +222,7 @@ Murmur can send audio to a Whisper server running on another machine - useful if
 ### How it works
 
 1. The server runs a FastAPI service that accepts audio and returns transcribed text
-2. Communication is secured with an API key
+2. Requests can be authenticated with an API key; use HTTPS or a trusted VPN when audio crosses an untrusted network
 3. The client sends a small WAV file over HTTP and receives the transcribed text back
 
 All you need is for the client to be able to reach the server's URL. How you arrange that is up to you.
@@ -223,9 +262,11 @@ If your server is a Windows PC with Murmur installed:
 
 The server can be started and stopped from the tray icon at any time. Enable **"Start server when Murmur launches"** to have it start automatically.
 
-### Linux server (Ubuntu / Debian)
+### Linux server
 
 Requirements: Python 3.10+, CUDA 12.x (for GPU), or CPU-only.
+
+The server does not implement the desktop client's automatic CUDA-to-CPU fallback. Set `WHISPER_DEVICE` and `WHISPER_COMPUTE_TYPE` explicitly for the server host.
 
 ```bash
 cd murmur/server

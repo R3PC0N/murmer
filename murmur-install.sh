@@ -1,6 +1,7 @@
 #!/bin/bash
 # Murmur — Linux installer
-# Downloads Murmur, extracts it to ~/murmur, and runs the setup script.
+# Downloads Murmur, extracts it to ~/murmur, and runs the non-root bootstrap.
+# Distribution system prerequisites must already be installed; see README.md.
 #
 # Usage:
 #   bash murmur-install.sh

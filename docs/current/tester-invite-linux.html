@@ -53,7 +53,7 @@
           <tr>
             <td style="padding-bottom:20px;">
               <p style="margin:0;font-size:15px;color:#aeaeb2;line-height:1.7;">
-                Install with a single command in your terminal. The script downloads Murmur, installs all dependencies, and sets everything up automatically.
+                Install the system prerequisites for your distribution first, then run the command below. It downloads Murmur and runs the portable, non-root bootstrap for the Python environment and desktop launcher.
               </p>
             </td>
           </tr>
@@ -77,15 +77,19 @@
             <td style="padding-bottom:8px;">
               <ul style="margin:0;padding-left:20px;color:#aeaeb2;font-size:15px;line-height:1.9;">
                 <li>Installs to <code style="font-size:13px;color:#e5e5ea;background:#2c2c2e;padding:1px 5px;border-radius:4px;">~/murmur</code> — start it with <code style="font-size:13px;color:#e5e5ea;background:#2c2c2e;padding:1px 5px;border-radius:4px;">~/murmur/murmur.sh</code></li>
-                <li>Requires Python 3.10–3.13 &amp; a Debian-based distro (Ubuntu 22.04 / 24.04, Zorin OS, etc.) &nbsp;·&nbsp; <span style="color:#C8922A;">⚠ Python 3.14 is not yet compatible</span></li>
-                <li>If you have an NVIDIA GPU, CUDA will be used automatically for faster transcription — otherwise it falls back to CPU (slower, still works)</li>
+                <li>Tested on Arch Linux / Omarchy with Hyprland and native Wayland; Debian and Ubuntu prerequisite packages are documented in the included README</li>
+                <li>Requires Python 3.10 or newer; Python 3.14.6 is confirmed working on the tested Arch workstation</li>
+                <li>CPU and CUDA transcription are supported. The built-in default configuration falls back to CPU automatically when CUDA is unavailable</li>
               </ul>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom:32px;">
               <p style="margin:12px 0 0;font-size:13px;color:#636366;line-height:1.6;">
-                The setup script may add your user to the <code style="font-size:12px;color:#aeaeb2;background:#2c2c2e;padding:1px 4px;border-radius:3px;">input</code> group for global hotkeys — if so, it will ask you to log out and back in once before the hotkey works.
+                The bootstrap does not install system packages or change input-device permissions. Hyprland hotkeys use temporary compositor bindings; X11 uses its separate compatibility backend. Other native-Wayland compositors do not yet have a supported global-hotkey backend.
+              </p>
+              <p style="margin:8px 0 0;font-size:13px;color:#636366;line-height:1.6;">
+                Arch/Omarchy users need the GTK3, WebKitGTK, PyGObject/Cairo, PortAudio/PipeWire, AppIndicator, <code style="font-size:12px;color:#aeaeb2;background:#2c2c2e;padding:1px 4px;border-radius:3px;">wtype</code>, and XDG packages listed in the README; Hyprland supplies <code style="font-size:12px;color:#aeaeb2;background:#2c2c2e;padding:1px 4px;border-radius:3px;">hyprctl</code>. Debian/Ubuntu use their separately listed package equivalents. X11 testers need <code style="font-size:12px;color:#aeaeb2;background:#2c2c2e;padding:1px 4px;border-radius:3px;">xdotool</code> instead of the Wayland input tools.
               </p>
             </td>
           </tr>
@@ -149,7 +153,7 @@
                 Murmur is also available on Windows. Install Python first, then run the Murmur installer. Make sure to tick "Add Python to PATH" during the Python installation.
               </p>
               <p style="margin:8px 0 0;font-size:13px;color:#636366;line-height:1.6;">
-                Python 3.10–3.13 required &nbsp;·&nbsp; <span style="color:#C8922A;">⚠ Python 3.14 is not yet compatible</span>
+                The current Windows installer accepts Python 3.10–3.13. Python 3.14.6 compatibility is confirmed for the tested Arch/Linux environment.
               </p>
             </td>
           </tr>
@@ -282,6 +286,7 @@
               <ul style="margin:12px 0 0 0;padding-left:20px;color:#aeaeb2;font-size:15px;line-height:1.8;">
                 <li>Set your Whisper server URL and API key in Settings</li>
                 <li><strong style="color:#e5e5ea;">Linux / Windows:</strong> hold the hotkey (default: F9) anywhere to record — release to transcribe and paste</li>
+                <li>Try Automatic, Dutch, and English language selection in Transcription settings</li>
                 <li><strong style="color:#e5e5ea;">Android:</strong> tap the floating overlay button when a keyboard is open — auto-pastes on completion</li>
                 <li>Try dictating into different apps (browser, notes, terminal, chat)</li>
                 <li>Enable AI Cleanup in Settings if you have an Anthropic API key — it removes filler words and fixes punctuation</li>
@@ -298,8 +303,9 @@
           <tr>
             <td style="padding-bottom:32px;">
               <ul style="margin:12px 0 0 0;padding-left:20px;color:#aeaeb2;font-size:15px;line-height:1.8;">
-                <li>The tray icon needs the GNOME AppIndicator extension — the setup script enables it automatically, but you may need to log out and back in once for it to appear</li>
-                <li>The hotkey key itself may briefly appear in your focused window in terminals (Linux limitation) — using an F-key avoids this</li>
+                <li>The tray icon needs a StatusNotifier/AppIndicator host. Waybar with its tray module is validated; GNOME commonly needs an AppIndicator extension</li>
+                <li>Native Wayland push-to-talk currently supports Hyprland specifically. Murmur detects conflicting Hyprland F-key bindings and lets you choose another available key</li>
+                <li>Wayland text insertion uses <code style="font-size:13px;color:#e5e5ea;background:#2c2c2e;padding:1px 5px;border-radius:4px;">wtype</code>; X11 uses <code style="font-size:13px;color:#e5e5ea;background:#2c2c2e;padding:1px 5px;border-radius:4px;">xdotool</code></li>
                 <li>On first launch Murmur downloads the Whisper model (~1.5 GB for the default), which takes a few minutes depending on your connection</li>
               </ul>
             </td>

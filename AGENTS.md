@@ -15,8 +15,8 @@ Murmur is an existing cross-platform Python desktop application for push-to-talk
 - `server/faster_whisper_server.py` is the FastAPI transcription server; server dependencies and service examples live under `server/`.
 - `config.py` loads defaults, `.env`, and `settings.json`. Mutable settings are currently source-relative; see the filesystem policy below before extending this pattern.
 - `paster.py` selects Windows, Linux/X11, or Linux/Wayland text insertion. Windows uses clipboard plus simulated paste, X11 uses `xdotool`, and the tested Wayland backend uses `wtype`.
-- Global hotkeys are handled in `main.py`: Windows uses `keyboard`, while the current Linux path uses `pynput`. Do not assume that this Linux implementation provides reliable native-Wayland global hotkeys.
-- `autostart.py` uses the Windows registry or an XDG autostart desktop file. `main.py` also creates a Linux application/icon entry.
+- `hotkeys.py` selects the global-hotkey backend. Windows uses `keyboard`, Linux/X11 uses `pynput`, and Hyprland/native Wayland uses temporary compositor runtime bindings through `hyprctl`. Other native-Wayland compositors receive a clear unsupported-backend error rather than an X11 fallback.
+- `autostart.py` uses the Windows registry or an XDG autostart desktop file. The portable Linux bootstrap installs the visible XDG application entry and icon.
 - Platform-specific code exists in several modules. Keep new platform decisions explicit and narrowly scoped rather than spreading ad hoc `sys.platform` checks.
 
 ## Platform support philosophy
@@ -47,7 +47,7 @@ Report workstation-level dependencies clearly so they can be recorded separately
 - Wayland text insertion in `paster.py` uses the live-tested `wtype` backend. It sends literal text through stdin with a small inter-key delay and normalizes tabs to spaces. Preserve its shell-safety and error reporting.
 - X11 retains the `xdotool` backend. Do not remove it when changing Wayland behavior.
 - Clipboard access and keyboard/input injection are separate capabilities. Writing the clipboard does not by itself paste into the focused application.
-- Global hotkeys need a deliberate Wayland design. Do not grant broad input-device access, add users to input-related groups, or add udev rules unless an implemented backend demonstrably requires it and the security tradeoff is documented.
+- Hyprland global hotkeys use temporary runtime bindings and conflict detection from `hotkeys.py`; Murmur does not permanently edit compositor configuration. Do not grant broad input-device access, add users to input-related groups, or add udev rules unless another implemented backend demonstrably requires it and the security tradeoff is documented.
 - PipeWire is the expected modern Linux audio environment, commonly reached through PortAudio compatibility. Keep audio handling portable where practical and test actual device enumeration and recording in a live session.
 
 ## Filesystem and state policy

@@ -1,4 +1,5 @@
 #!/bin/bash
+# Portable user-level bootstrap. System packages remain distro-managed; see README.md.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
