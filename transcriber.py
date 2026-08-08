@@ -11,6 +11,12 @@ import logger
 _CPU_COMPUTE_PREFERENCE = ("int8", "int8_float32", "int16", "float32")
 
 
+def _language_argument() -> str | None:
+    """Return None to let faster-whisper perform language detection."""
+    language = config.WHISPER_LANGUAGE.strip().lower()
+    return language or None
+
+
 def _cuda_available(compute_type: str) -> bool:
     """Ask CTranslate2 whether CUDA supports the requested compute type."""
     try:
@@ -107,6 +113,7 @@ class Transcriber:
             vad_filter=True,
             vad_parameters={"min_silence_duration_ms": 300},
             initial_prompt=initial_prompt,
+            language=_language_argument(),
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
         return text, info.language
@@ -119,6 +126,7 @@ class Transcriber:
             url,
             headers=headers,
             files={"audio": ("audio.wav", wav, "audio/wav")},
+            data={"language": config.WHISPER_LANGUAGE},
             timeout=30,
         )
         resp.raise_for_status()

@@ -6,7 +6,7 @@ import wave
 import numpy as np
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from faster_whisper import WhisperModel
 
 load_dotenv()
@@ -38,6 +38,7 @@ def _authenticate(x_api_key: str | None):
 @app.post("/transcribe")
 async def transcribe(
     audio: UploadFile = File(...),
+    language: str | None = Form(default=None),
     x_api_key: str | None = Header(default=None),
 ):
     _authenticate(x_api_key)
@@ -54,6 +55,7 @@ async def transcribe(
             beam_size=5,
             vad_filter=True,
             vad_parameters={"min_silence_duration_ms": 300},
+            language=language or None,
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
     finally:

@@ -30,6 +30,7 @@ class SettingsAPI:
             "AUDIO_DEVICE":           current,
             "WHISPER_MODEL":          config.WHISPER_MODEL,
             "WHISPER_DEVICE":         config.WHISPER_DEVICE,
+            "WHISPER_LANGUAGE":       config.WHISPER_LANGUAGE,
             "TRANSCRIPTION_MODE":     config.TRANSCRIPTION_MODE,
             "REMOTE_WHISPER_URL":     config.REMOTE_WHISPER_URL,
             "REMOTE_WHISPER_API_KEY": config.REMOTE_WHISPER_API_KEY,

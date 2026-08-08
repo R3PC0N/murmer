@@ -453,6 +453,16 @@
             </div>
           </div>
 
+          <div class="field-group">
+            <div class="field-label">Language</div>
+            <select id="whisper-language" style="max-width:220px">
+              <option value="">Automatic</option>
+              <option value="nl">Dutch</option>
+              <option value="en">English</option>
+            </select>
+            <div class="hint">Automatic detects the spoken language for each recording.</div>
+          </div>
+
           <!-- Local -->
           <div id="local-panel">
             <div class="field-group">
@@ -807,6 +817,7 @@
     setMode(cfg.TRANSCRIPTION_MODE || 'local');
     setSelectVal('whisper-model', cfg.WHISPER_MODEL);
     setSelectVal('whisper-device', cfg.WHISPER_DEVICE);
+    setSelectVal('whisper-language', cfg.WHISPER_LANGUAGE || '');
     document.getElementById('remote-url').value = cfg.REMOTE_WHISPER_URL || '';
     document.getElementById('remote-key').value = cfg.REMOTE_WHISPER_API_KEY || '';
     populateServers(cfg.SAVED_SERVERS);
@@ -875,6 +886,7 @@
 
     const updates = {
       PUSH_TO_TALK_KEY:       cfg.PUSH_TO_TALK_KEY || 'f9',
+      WHISPER_LANGUAGE:       document.getElementById('whisper-language').value,
       AUDIO_DEVICE:           devSel.value || null,
       TRANSCRIPTION_MODE:     mode,
       REMOTE_WHISPER_URL:     document.getElementById('remote-url').value.trim(),

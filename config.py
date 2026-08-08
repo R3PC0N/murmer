@@ -14,6 +14,7 @@ _DEFAULTS: dict = {
     "WHISPER_MODEL": "large-v3",
     "WHISPER_DEVICE": "cuda",
     "WHISPER_COMPUTE_TYPE": "float16",
+    "WHISPER_LANGUAGE": "",
     "WHISPER_SERVER_AUTOSTART": False,
     "TRANSCRIPTION_MODE": "local",
     "REMOTE_WHISPER_URL": "",
