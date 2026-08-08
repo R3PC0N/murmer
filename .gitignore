@@ -25,3 +25,6 @@ build/
 .idea/
 CLAUDE.md
 .claude/
+
+# Generated Linux launcher
+murmur.sh
