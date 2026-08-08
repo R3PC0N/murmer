@@ -1,0 +1,15 @@
+main.py
+config.py
+recorder.py
+transcriber.py
+cleaner.py
+paster.py
+overlay.py
+settings_window.py
+log_window.py
+server_manager_window.py
+splash.py
+theme_utils.py
+autostart.py
+logger.py
+hotkeys.py

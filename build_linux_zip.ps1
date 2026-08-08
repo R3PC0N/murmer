@@ -23,17 +23,15 @@ New-Item -ItemType Directory -Force -Path "$tempDir\ui"  | Out-Null
 New-Item -ItemType Directory -Force -Path "$tempDir\server" | Out-Null
 
 # ── Python source ───────────────────────────────────────────────────────────
-$pyFiles = @(
-    'main.py', 'config.py', 'recorder.py', 'transcriber.py', 'cleaner.py',
-    'paster.py', 'overlay.py', 'settings_window.py', 'log_window.py',
-    'server_manager_window.py', 'splash.py', 'theme_utils.py',
-    'autostart.py', 'logger.py'
-)
+$pyFiles = Get-Content "$src\linux_runtime_files.txt" | Where-Object { $_.Trim() }
 foreach ($f in $pyFiles) { Copy-LF "$src\$f" "$tempDir\$f" }
 
 # ── Root support files ──────────────────────────────────────────────────────
 Copy-LF  "$src\requirements.txt"     "$tempDir\requirements.txt"
+Copy-LF  "$src\README.md"            "$tempDir\README.md"
 Copy-LF  "$src\setup_linux.sh"       "$tempDir\setup_linux.sh"
+Copy-LF  "$src\linux_bootstrap.py"   "$tempDir\linux_bootstrap.py"
+Copy-LF  "$src\linux_runtime_files.txt" "$tempDir\linux_runtime_files.txt"
 Copy-LF  "$src\.env.example"         "$tempDir\.env.example"
 Copy-LF  "$src\murmur.svg"           "$tempDir\murmur.svg"
 Copy-LF  "$src\murmur-light.svg"     "$tempDir\murmur-light.svg"

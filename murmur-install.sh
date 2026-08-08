@@ -26,7 +26,7 @@ echo ""
 # ── Check dependencies ────────────────────────────────────────────────────
 for cmd in curl unzip; do
     if ! command -v "$cmd" &>/dev/null; then
-        echo -e "${RED}✗ '$cmd' is required. Install it with: sudo apt install $cmd${NC}"
+        echo -e "${RED}✗ '$cmd' is required. Install it with your distribution's package manager, then rerun this installer.${NC}"
         exit 1
     fi
 done

@@ -36,9 +36,36 @@ No subscription. No cloud. Your audio never leaves your machine - unless you cho
 
 > ⚠ During Python installation, tick **"Add Python to PATH"**.
 
-### Linux (Ubuntu / Debian / Zorin OS)
+### Linux system prerequisites
 
-Run `setup_linux.sh` — it handles everything automatically. See [Linux setup](#linux-setup) below.
+System package names are distribution-specific. Install the appropriate set before running the portable bootstrap.
+
+#### Arch Linux / Omarchy
+
+```bash
+sudo pacman -S --needed \
+  python tk portaudio pipewire pipewire-pulse wireplumber \
+  gtk3 webkit2gtk-4.1 python-gobject python-cairo \
+  libayatana-appindicator wtype xdg-utils
+```
+
+Hyprland users also need `hyprland`, which provides `hyprctl`. For an actual X11 session, install `xdotool`; it is not required for a native Wayland-only installation.
+
+#### Debian / Ubuntu
+
+Package availability varies by release. On current Debian/Ubuntu releases using WebKitGTK 4.1 and Ayatana AppIndicator:
+
+```bash
+sudo apt install \
+  python3 python3-venv python3-tk python3-gi python3-gi-cairo \
+  gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
+  libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
+  libportaudio2 pipewire pipewire-pulse wireplumber wtype xdg-utils
+```
+
+Older releases may use WebKitGTK 4.0 or `libappindicator3` package names instead. For an actual X11 session, install `xdotool`. Development headers such as `python3-dev`, `libcairo2-dev`, `libgirepository-2.0-dev`, and `build-essential` are only needed when a Python dependency must be compiled locally.
+
+A StatusNotifier/AppIndicator tray host is required for tray visibility. Waybar with its tray module is one validated implementation; GNOME users commonly need an AppIndicator extension. Murmur does not install or configure the tray host.
 
 ### For GPU transcription (recommended)
 
@@ -47,7 +74,7 @@ Run `setup_linux.sh` — it handles everything automatically. See [Linux setup](
 | **NVIDIA GPU Driver** | Latest | [nvidia.com/drivers](https://www.nvidia.com/Download/index.aspx) |
 | **NVIDIA CUDA Toolkit** | 12.x | [developer.nvidia.com/cuda-toolkit-archive](https://developer.nvidia.com/cuda-toolkit-archive) |
 
-Without CUDA, Murmur falls back to CPU transcription automatically. The installer detects this and sets a lighter model (`medium`, `int8`) as the default.
+Without usable CUDA, Murmur's built-in default runtime falls back to CPU transcription automatically. You can select a lighter model such as `medium` and CPU/int8 explicitly in Settings.
 
 ### For AI cleanup (optional)
 
@@ -77,9 +104,9 @@ cd murmur
 bash setup_linux.sh
 ```
 
-The script installs all system packages, creates a virtual environment, installs Python dependencies, enables the AppIndicator tray extension, and adds your user to the `input` group for global hotkeys.
+The script runs as your normal user. It creates `.venv` with access to system GTK/PyGObject packages, installs Python dependencies, validates the current desktop session's capabilities, and installs a visible XDG application entry and icon. It does not invoke a package manager or change device permissions.
 
-> ⚠ After setup, **log out and back in** once so the hotkey takes effect (input group).
+Native Wayland text insertion requires `wtype`. Hyprland push-to-talk uses temporary `hyprctl` runtime bindings and does not require membership in the `input` group. X11 sessions use `xdotool` instead.
 
 Start Murmur:
 
@@ -119,7 +146,7 @@ Open Settings from the tray icon (right-click → Settings).
 |---|---|
 | **General** | Push-to-talk key, start with system |
 | **Audio** | Input device |
-| **Transcription** | Local or remote mode, Whisper model and device, saved remote servers |
+| **Transcription** | Local or remote mode, Whisper model, device and language, saved remote servers |
 | **AI Cleanup** | Enable/disable Claude Haiku, Anthropic API key |
 | **Display** | Recording overlay, sound feedback |
 | **Profile** | Transcription style, user context, word corrections |
