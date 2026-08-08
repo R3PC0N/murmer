@@ -38,6 +38,30 @@ class BackendDetectionTests(unittest.TestCase):
 
 
 class CommandTests(unittest.TestCase):
+    @patch("paster.subprocess.run")
+    @patch("paster.shutil.which", return_value="/usr/bin/wtype")
+    @patch("paster.detect_backend", return_value="wayland")
+    def test_paste_text_sends_cleaned_value_to_wayland_stdin(
+        self, _detect_backend, _which, run
+    ):
+        run.return_value = subprocess.CompletedProcess(
+            ["/usr/bin/wtype", "-d", "5", "-"], 0, "", ""
+        )
+        text = "CLEANED OUTPUT 12345 — € ñ 中文\nLiteral: $HOME; $(echo raw)\tend"
+
+        paster.paste_text(text)
+
+        run.assert_called_once_with(
+            ["/usr/bin/wtype", "-d", "5", "-"],
+            input=(
+                "CLEANED OUTPUT 12345 — € ñ 中文\n"
+                "Literal: $HOME; $(echo raw)    end"
+            ),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
     def test_missing_wayland_executable_has_a_clear_error(self):
         with patch("paster.shutil.which", return_value=None):
             with self.assertRaisesRegex(paster.TextInsertionError, "wtype.*not found"):
