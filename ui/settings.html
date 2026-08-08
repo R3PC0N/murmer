@@ -401,6 +401,7 @@
             <div class="row" style="margin-top:4px">
               <div class="key-badge" id="hotkey-badge">F9</div>
               <button class="btn-primary btn-sm" id="capture-btn" onclick="startCapture()">Capture key</button>
+              <select id="hotkey-select" style="display:none;max-width:260px" onchange="selectHotkey()"></select>
             </div>
             <div class="hint">Hold this key anywhere to record. Release to transcribe and paste.</div>
           </div>
@@ -746,12 +747,45 @@
     }
   }
 
+  function selectHotkey() {
+    const select = document.getElementById('hotkey-select');
+    if (select.value) {
+      cfg.PUSH_TO_TALK_KEY = select.value;
+      document.getElementById('hotkey-badge').textContent = select.value.toUpperCase();
+    }
+  }
+
+  function configureHotkeyInput() {
+    if (cfg.HOTKEY_CAPTURE_MODE !== 'select') return;
+    const captureBtn = document.getElementById('capture-btn');
+    const select = document.getElementById('hotkey-select');
+    captureBtn.style.display = 'none';
+    select.style.display = '';
+    select.innerHTML = '';
+    (cfg.HOTKEY_OPTIONS || []).forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.key;
+      option.disabled = !item.available && item.key !== cfg.PUSH_TO_TALK_KEY;
+      const conflict = (item.conflicts || []).join(', ');
+      option.textContent = item.key.toUpperCase() + (conflict ? ` — In use: ${conflict}` : '');
+      select.appendChild(option);
+    });
+    if (![...select.options].some(option => option.value === cfg.PUSH_TO_TALK_KEY)) {
+      const current = document.createElement('option');
+      current.value = cfg.PUSH_TO_TALK_KEY;
+      current.textContent = cfg.PUSH_TO_TALK_KEY.toUpperCase();
+      select.prepend(current);
+    }
+    select.value = cfg.PUSH_TO_TALK_KEY;
+  }
+
   // ── Load config ────────────────────────────────────────────────────────────
   async function loadConfig() {
     cfg = await window.pywebview.api.get_config();
 
     // General
     document.getElementById('hotkey-badge').textContent = (cfg.PUSH_TO_TALK_KEY || 'f9').toUpperCase();
+    configureHotkeyInput();
     setToggle('toggle-autostart', cfg.AUTO_START);
     toggleValues['AUTO_START'] = !!cfg.AUTO_START;
 

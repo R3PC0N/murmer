@@ -7,6 +7,7 @@ import webview
 import autostart
 import cleaner
 import config
+import hotkeys
 from recorder import get_device_names
 from theme_utils import apply_title_bar_theme
 
@@ -23,6 +24,8 @@ class SettingsAPI:
         current = config.AUDIO_DEVICE
         return {
             "PUSH_TO_TALK_KEY":       config.PUSH_TO_TALK_KEY,
+            "HOTKEY_CAPTURE_MODE":    hotkeys.capture_mode(),
+            "HOTKEY_OPTIONS":         hotkeys.hotkey_options(),
             "AUTO_START":             autostart.is_enabled(),
             "AUDIO_DEVICE":           current,
             "WHISPER_MODEL":          config.WHISPER_MODEL,
@@ -48,6 +51,8 @@ class SettingsAPI:
         return get_device_names()
 
     def capture_hotkey(self) -> str:
+        if hotkeys.capture_mode() == "select":
+            return ""
         if self._capturing:
             return ""
         self._capturing = True
