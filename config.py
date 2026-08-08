@@ -38,6 +38,14 @@ MIN_RECORDING_SAMPLES = 4800
 ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 
 
+def uses_default_whisper_runtime() -> bool:
+    """Return whether the effective Whisper runtime still matches defaults."""
+    return all(
+        globals().get(key) == _DEFAULTS[key]
+        for key in ("WHISPER_MODEL", "WHISPER_DEVICE", "WHISPER_COMPUTE_TYPE")
+    )
+
+
 def _load() -> dict:
     data = dict(_DEFAULTS)
     if _SETTINGS_FILE.exists():
