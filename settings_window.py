@@ -23,7 +23,7 @@ class SettingsAPI:
     def get_config(self) -> dict:
         current = config.AUDIO_DEVICE
         return {
-            "PUSH_TO_TALK_KEY":       config.PUSH_TO_TALK_KEY,
+            "PUSH_TO_TALK_KEY":       hotkeys.normalize_hotkey(config.PUSH_TO_TALK_KEY),
             "HOTKEY_CAPTURE_MODE":    hotkeys.capture_mode(),
             "HOTKEY_OPTIONS":         hotkeys.hotkey_options(),
             "AUTO_START":             autostart.is_enabled(),
@@ -92,6 +92,10 @@ class SettingsAPI:
 
     def save_settings(self, updates: dict, restart: bool = False):
         auto = updates.pop("AUTO_START", None)
+        if "PUSH_TO_TALK_KEY" in updates:
+            updates["PUSH_TO_TALK_KEY"] = hotkeys.normalize_hotkey(
+                updates["PUSH_TO_TALK_KEY"]
+            )
         config.save(updates)
         if auto is not None:
             autostart.set_enabled(bool(auto))

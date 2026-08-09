@@ -158,7 +158,7 @@ The hotkey can be changed in **Settings → General**.
 - **Hyprland/Wayland:** Murmur registers temporary press and release bindings through `hyprctl` and relays those events to the running process. It does not permanently edit Hyprland configuration.
 - **Other native-Wayland compositors:** Murmur reports that no supported global-hotkey backend is available instead of attempting an unreliable X11 fallback.
 
-On Hyprland, Settings offers F1–F12 and marks keys already owned by another compositor binding. Murmur will not silently replace a conflicting binding. A desktop or distribution may already use F9, so choose any key shown as available.
+On Hyprland, Settings offers F1–F12, letters, digits, and Space with optional Ctrl, Alt, Shift, and Super modifiers. Murmur compares the complete combination and will not replace an identical compositor binding. A desktop or distribution may already use F9, so choose an available combination.
 
 ### Text insertion backends
 

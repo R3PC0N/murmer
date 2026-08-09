@@ -1,10 +1,12 @@
 import os
+import re
 import shlex
 import shutil
 import socket
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -18,6 +20,51 @@ class HotkeyError(RuntimeError):
 
 _MURMUR_DESCRIPTION = "Murmur push-to-talk"
 _HYPRLAND_KEYS = tuple(f"f{i}" for i in range(1, 13))
+_SELECTABLE_KEYS = (
+    *_HYPRLAND_KEYS,
+    *tuple("abcdefghijklmnopqrstuvwxyz"),
+    *tuple("0123456789"),
+    "space",
+)
+_MODIFIER_ORDER = ("ctrl", "alt", "shift", "super")
+_HYPRLAND_MODIFIERS = {"ctrl": "CTRL", "alt": "ALT", "shift": "SHIFT", "super": "SUPER"}
+_HYPRLAND_MODMASKS = {"shift": 1, "ctrl": 4, "alt": 8, "super": 64}
+_HYPRLAND_MODIFIER_KEYS = {
+    "ctrl": ("Control_L", "Control_R"),
+    "alt": ("Alt_L", "Alt_R"),
+    "shift": ("Shift_L", "Shift_R"),
+    "super": ("Super_L", "Super_R"),
+}
+_HOTKEY_TRACE_ENV = "MURMUR_HOTKEY_TRACE"
+_HOTKEY_SOCKET_RE = re.compile(r"^hotkey-(\d+)-([0-9a-f]+)\.sock$")
+
+
+def _trace_hotkey(path: str | None, stage: str, event: str, detail: str = ""):
+    """Append one opt-in diagnostic record without affecting hotkey delivery."""
+    if not path:
+        return
+    line = f"{time.time_ns()} pid={os.getpid()} stage={stage} event={event}"
+    if detail:
+        line += f" detail={detail}"
+    line += "\n"
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        try:
+            os.write(fd, line.encode("utf-8", errors="replace"))
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+
+
+def _pid_is_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def detect_backend(
@@ -63,6 +110,46 @@ def normalize_key(key: str) -> str:
     return normalized
 
 
+def parse_hotkey(value: str) -> tuple[tuple[str, ...], str]:
+    """Return canonical modifiers and key for a persisted hotkey string."""
+    parts = [part.strip().lower() for part in value.split("+")]
+    if not parts or any(not part for part in parts):
+        raise HotkeyError(f"Invalid push-to-talk hotkey: {value!r}.")
+    aliases = {"control": "ctrl", "win": "super", "meta": "super"}
+    parts = [aliases.get(part, part) for part in parts]
+    try:
+        key = normalize_key(parts[-1])
+    except HotkeyError:
+        # Windows and X11 historically accepted backend-specific, unmodified
+        # key names. Keep those persisted values loadable; Hyprland validates
+        # its key separately below.
+        if len(parts) != 1:
+            raise
+        key = parts[-1]
+    modifiers = parts[:-1]
+    if key in _MODIFIER_ORDER:
+        raise HotkeyError("A push-to-talk hotkey must include a non-modifier key.")
+    if any(modifier not in _MODIFIER_ORDER for modifier in modifiers):
+        raise HotkeyError(f"Unsupported modifier in push-to-talk hotkey: {value!r}.")
+    if len(set(modifiers)) != len(modifiers):
+        raise HotkeyError(f"Duplicate modifier in push-to-talk hotkey: {value!r}.")
+    ordered = tuple(modifier for modifier in _MODIFIER_ORDER if modifier in modifiers)
+    return ordered, key
+
+
+def normalize_hotkey(value: str) -> str:
+    modifiers, key = parse_hotkey(value)
+    return "+".join((*modifiers, key))
+
+
+def _hyprland_modifiers(modifiers: tuple[str, ...]) -> str:
+    return " ".join(_HYPRLAND_MODIFIERS[modifier] for modifier in modifiers)
+
+
+def _hyprland_modmask(modifiers: tuple[str, ...]) -> str:
+    return str(sum(_HYPRLAND_MODMASKS[modifier] for modifier in modifiers))
+
+
 def _hyprland_key(key: str) -> str:
     names = {
         "space": "SPACE", "enter": "RETURN", "esc": "ESCAPE",
@@ -106,11 +193,13 @@ def _run_hyprctl(args: list[str]) -> str:
     return result.stdout
 
 
-def _bindings_for_key(key: str) -> list[dict[str, str]]:
+def _bindings_for_hotkey(hotkey: str) -> list[dict[str, str]]:
+    modifiers, key = parse_hotkey(hotkey)
     hypr_key = _hyprland_key(key)
+    modmask = _hyprland_modmask(modifiers)
     return [
         record for record in _parse_hyprland_binds(_run_hyprctl(["binds"]))
-        if record.get("key", "").upper() == hypr_key and record.get("modmask") == "0"
+        if record.get("key", "").upper() == hypr_key and record.get("modmask") == modmask
     ]
 
 
@@ -119,7 +208,7 @@ def hotkey_options() -> list[dict[str, object]]:
         return []
     records = _parse_hyprland_binds(_run_hyprctl(["binds"]))
     options = []
-    for key in _HYPRLAND_KEYS:
+    for key in _SELECTABLE_KEYS:
         hypr_key = _hyprland_key(key)
         conflicts = [
             record for record in records
@@ -136,8 +225,8 @@ class WindowsHotkeyBackend:
     name = "windows"
 
     def __init__(self, key: str, on_press: Callable, on_release: Callable):
-        # Preserve the keyboard package's existing free-form Windows key names.
-        self.key = key
+        # Preserve the keyboard package's existing free-form unmodified names.
+        self.key = normalize_hotkey(key)
         self.on_press = on_press
         self.on_release = on_release
 
@@ -156,7 +245,16 @@ class WindowsHotkeyBackend:
                 threading.Thread(target=self.on_release, daemon=True).start()
 
         def listen():
-            keyboard.hook_key(self.key, on_key_event, suppress=True)
+            modifiers, key = parse_hotkey(self.key)
+
+            def matches():
+                return all(keyboard.is_pressed(modifier) for modifier in modifiers)
+
+            def filtered_event(event):
+                if matches() or held:
+                    on_key_event(event)
+
+            keyboard.hook_key(key, filtered_event, suppress=True)
             keyboard.wait()
 
         threading.Thread(target=listen, daemon=True).start()
@@ -192,14 +290,22 @@ class X11HotkeyBackend:
     name = "x11"
 
     def __init__(self, key: str, on_press: Callable, on_release: Callable):
-        self.key = key
+        self.key = normalize_hotkey(key)
         self.on_press = on_press
         self.on_release = on_release
         self.listener = None
 
     def start(self):
         from pynput import keyboard
-        target = _pynput_key(self.key)
+        modifiers, key_name = parse_hotkey(self.key)
+        target = _pynput_key(key_name)
+        modifier_keys = {
+            "ctrl": {keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r},
+            "alt": {keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r},
+            "shift": {keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r},
+            "super": {keyboard.Key.cmd, keyboard.Key.cmd_l, keyboard.Key.cmd_r},
+        }
+        pressed = set()
         held = False
 
         def matches(key):
@@ -209,7 +315,9 @@ class X11HotkeyBackend:
 
         def on_press(key):
             nonlocal held
-            if matches(key) and not held:
+            pressed.add(key)
+            modifiers_down = all(pressed & modifier_keys[modifier] for modifier in modifiers)
+            if matches(key) and modifiers_down and not held:
                 held = True
                 threading.Thread(target=self.on_press, daemon=True).start()
 
@@ -218,6 +326,7 @@ class X11HotkeyBackend:
             if matches(key) and held:
                 held = False
                 threading.Thread(target=self.on_release, daemon=True).start()
+            pressed.discard(key)
 
         self.listener = keyboard.Listener(on_press=on_press, on_release=on_release)
         self.listener.start()
@@ -232,30 +341,160 @@ class HyprlandHotkeyBackend:
     name = "hyprland"
 
     def __init__(self, key: str, on_press: Callable, on_release: Callable):
-        self.key = normalize_key(key)
-        self.hypr_key = _hyprland_key(key)
+        self.hotkey = normalize_hotkey(key)
+        self.modifiers, self.key = parse_hotkey(self.hotkey)
+        self.key = normalize_key(self.key)
+        self.hypr_modifiers = _hyprland_modifiers(self.modifiers)
+        self.hypr_key = _hyprland_key(self.key)
         self.on_press = on_press
         self.on_release = on_release
         self.token = uuid.uuid4().hex[:8]
         runtime_dir = app_paths.runtime_directory()
+        self.runtime_dir = runtime_dir
         self.socket_path = runtime_dir / f"hotkey-{os.getpid()}-{self.token}.sock"
         self._socket = None
         self._thread = None
         self._stop_event = threading.Event()
         self._registered = False
-
-    def _remove_stale_binding(self, records: list[dict[str, str]]):
-        stale = [r for r in records if r.get("description", "").startswith(_MURMUR_DESCRIPTION)]
-        if stale:
-            _run_hyprctl(["keyword", "unbind", f", {self.hypr_key}"])
+        self._watchers_active = False
+        self._held = False
+        self._seen_press = False
+        self.trace_path = os.environ.get(_HOTKEY_TRACE_ENV)
 
     def _check_conflicts(self):
-        records = _bindings_for_key(self.key)
-        conflicts = [r for r in records if not r.get("description", "").startswith(_MURMUR_DESCRIPTION)]
+        conflicts = _bindings_for_hotkey(self.hotkey)
         if conflicts:
             details = "; ".join(r.get("description") or r.get("arg", "unknown binding") for r in conflicts)
-            raise HotkeyError(f"{self.hypr_key} is already bound in Hyprland: {details}")
-        self._remove_stale_binding(records)
+            raise HotkeyError(f"{self.hotkey.upper()} is already bound in Hyprland: {details}")
+
+    def _socket_from_record(self, record: dict[str, str]) -> tuple[Path, int] | None:
+        if not record.get("description", "").startswith(_MURMUR_DESCRIPTION):
+            return None
+        try:
+            arguments = shlex.split(record.get("arg", ""))
+        except ValueError:
+            return None
+        for argument in arguments:
+            path = Path(argument)
+            match = _HOTKEY_SOCKET_RE.fullmatch(path.name)
+            if path.parent == self.runtime_dir and match:
+                return path, int(match.group(1))
+        return None
+
+    def _cleanup_dead_sockets(self):
+        for path in self.runtime_dir.glob("hotkey-*-*.sock"):
+            match = _HOTKEY_SOCKET_RE.fullmatch(path.name)
+            if match and not _pid_is_alive(int(match.group(1))):
+                try:
+                    path.unlink()
+                    _trace_hotkey(self.trace_path, "startup", "stale_socket", f"removed:{path.name}")
+                except FileNotFoundError:
+                    pass
+
+    def _cleanup_stale_binding(self):
+        records = _bindings_for_hotkey(self.hotkey)
+        if not records:
+            return
+        stale = []
+        for record in records:
+            socket_owner = self._socket_from_record(record)
+            if socket_owner is None or _pid_is_alive(socket_owner[1]):
+                return
+            stale.append(socket_owner[0])
+
+        # Hyprland unbinds by target rather than description. Only remove the
+        # target when every matching record belongs to a dead Murmur instance.
+        _run_hyprctl(["keyword", "unbind", self._binding_target()])
+        for path in stale:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+        _trace_hotkey(self.trace_path, "startup", "stale_binding", "removed")
+
+    def _binding_target(self) -> str:
+        return f"{self.hypr_modifiers}, {self.hypr_key}"
+
+    def _release_watcher_targets(self) -> tuple[str, ...]:
+        keys = [self.hypr_key]
+        for modifier in self.modifiers:
+            keys.extend(_HYPRLAND_MODIFIER_KEYS[modifier])
+        return tuple(f"{self.hypr_modifiers}, {key}" for key in keys)
+
+    def _watcher_records(self) -> dict[str, list[dict[str, str]]]:
+        records = _parse_hyprland_binds(_run_hyprctl(["binds"]))
+        modmask = _hyprland_modmask(self.modifiers)
+        return {
+            target: [
+                record for record in records
+                if record.get("modmask") == modmask
+                and record.get("key", "").upper() == target.split(",", 1)[1].strip().upper()
+            ]
+            for target in self._release_watcher_targets()
+        }
+
+    def _activate_release_watchers(self) -> bool:
+        try:
+            records = self._watcher_records()
+        except HotkeyError as exc:
+            _trace_hotkey(self.trace_path, "watchers", "activate", f"failed:{exc}")
+            return False
+        base_description = f"{_MURMUR_DESCRIPTION} press [{self.token}]"
+        conflicts = [
+            record for target, matches in records.items() for record in matches
+            if target != self._binding_target() or record.get("description") != base_description
+        ]
+        if conflicts:
+            details = "; ".join(
+                record.get("description") or record.get("arg", "unknown binding")
+                for record in conflicts
+            )
+            _trace_hotkey(self.trace_path, "watchers", "activate", f"conflict:{details}")
+            return False
+
+        commands = []
+        for target in self._release_watcher_targets():
+            description = f"{_MURMUR_DESCRIPTION} watcher [{self.token}]"
+            commands.append(
+                f"keyword binddrn {target}, {description}, exec, {self._command('release', target)}"
+            )
+        try:
+            _run_hyprctl(["--batch", " ; ".join(commands)])
+        except HotkeyError as exc:
+            _trace_hotkey(self.trace_path, "watchers", "activate", f"failed:{exc}")
+            return False
+        self._watchers_active = True
+        _trace_hotkey(self.trace_path, "watchers", "activate", "registered")
+        return True
+
+    def _deactivate_release_watchers(self, preserve_base: bool = True):
+        if not self._watchers_active:
+            return
+        own_description = f"{_MURMUR_DESCRIPTION} watcher [{self.token}]"
+        base_description = f"{_MURMUR_DESCRIPTION} press [{self.token}]"
+        try:
+            records = self._watcher_records()
+            unexpected = [
+                record for target, matches in records.items() for record in matches
+                if record.get("description") != own_description
+                and not (
+                    target == self._binding_target()
+                    and record.get("description") == base_description
+                )
+            ]
+            if unexpected:
+                _trace_hotkey(self.trace_path, "watchers", "deactivate", "conflict;left_registered")
+                return
+            targets = [target for target, matches in records.items() if matches]
+            if targets:
+                commands = [f"keyword unbind {target}" for target in targets]
+                if preserve_base and self._binding_target() in targets:
+                    commands.append(f"keyword bindd {self._base_press_binding()}")
+                _run_hyprctl(["--batch", " ; ".join(commands)])
+            self._watchers_active = False
+            _trace_hotkey(self.trace_path, "watchers", "deactivate", "removed")
+        except HotkeyError as exc:
+            _trace_hotkey(self.trace_path, "watchers", "deactivate", f"failed:{exc}")
 
     def _serve(self):
         while not self._stop_event.is_set():
@@ -263,46 +502,81 @@ class HyprlandHotkeyBackend:
                 event = self._socket.recv(16).decode("ascii")
             except (OSError, UnicodeError):
                 break
-            callback = self.on_press if event == "press" else self.on_release if event == "release" else None
+            callback = None
+            if event == "press" and not self._held:
+                if self.modifiers and not self._activate_release_watchers():
+                    _trace_hotkey(self.trace_path, "socket", event, "press_rejected_no_watchers")
+                    continue
+                self._held = True
+                self._seen_press = True
+                callback = self.on_press
+                decision = "press"
+            elif event == "press":
+                decision = "duplicate_press"
+            elif event == "release" and self._held:
+                self._held = False
+                callback = self.on_release
+                decision = "release"
+            elif event == "release":
+                decision = "duplicate_release" if self._seen_press else "ignored_stale_release"
+            else:
+                decision = "ignored_unknown"
+            _trace_hotkey(self.trace_path, "socket", event, decision)
             if callback:
                 threading.Thread(target=callback, daemon=True).start()
+            if decision == "release" and self.modifiers:
+                self._deactivate_release_watchers()
 
-    def _command(self, event: str) -> str:
-        return shlex.join([
+    def _command(self, event: str, binding_target: str | None = None) -> str:
+        command = [
             sys.executable,
             str(Path(__file__).resolve()),
             "emit",
             str(self.socket_path),
             event,
-            self.hypr_key,
-        ])
+            binding_target or self._binding_target(),
+        ]
+        if self.trace_path:
+            command.append(self.trace_path)
+        return shlex.join(command)
+
+    def _base_press_binding(self) -> str:
+        return (
+            f"{self._binding_target()}, {_MURMUR_DESCRIPTION} press [{self.token}], "
+            f"exec, {self._command('press')}"
+        )
 
     def start(self):
-        self._check_conflicts()
-        self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        self._socket.bind(str(self.socket_path))
-        os.chmod(self.socket_path, 0o600)
-        self._thread = threading.Thread(target=self._serve, daemon=True)
-        self._thread.start()
-
         try:
+            self._cleanup_dead_sockets()
+            self._cleanup_stale_binding()
+            self._check_conflicts()
+            self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            self._socket.bind(str(self.socket_path))
+            os.chmod(self.socket_path, 0o600)
+            self._thread = threading.Thread(target=self._serve, daemon=True)
+            self._thread.start()
             _run_hyprctl([
                 "keyword", "bindd",
-                f", {self.hypr_key}, {_MURMUR_DESCRIPTION} press [{self.token}], exec, {self._command('press')}",
+                self._base_press_binding(),
             ])
             self._registered = True
-            _run_hyprctl([
-                "keyword", "binddr",
-                f", {self.hypr_key}, {_MURMUR_DESCRIPTION} release [{self.token}], exec, {self._command('release')}",
-            ])
-        except Exception:
+            if not self.modifiers:
+                _run_hyprctl([
+                    "keyword", "binddr",
+                    f"{self._binding_target()}, {_MURMUR_DESCRIPTION} release [{self.token}], exec, {self._command('release')}",
+                ])
+        except Exception as exc:
             self.stop()
-            raise
+            if isinstance(exc, HotkeyError):
+                raise
+            raise HotkeyError(f"Could not initialize Hyprland hotkey backend: {exc}") from exc
 
     def stop(self):
+        self._deactivate_release_watchers(preserve_base=False)
         if self._registered:
             try:
-                _run_hyprctl(["keyword", "unbind", f", {self.hypr_key}"])
+                _run_hyprctl(["keyword", "unbind", self._binding_target()])
             except HotkeyError:
                 pass
         self._registered = False
@@ -343,18 +617,21 @@ def capture_mode() -> str:
     return "select" if detect_backend() in ("hyprland", "unsupported-wayland") else "capture"
 
 
-def _emit(socket_path: str, event: str, hypr_key: str) -> int:
+def _emit(socket_path: str, event: str, binding_target: str, trace_path: str | None = None) -> int:
+    _trace_hotkey(trace_path, "helper", event, "launched")
     client = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
     try:
         client.sendto(event.encode("ascii"), socket_path)
+        _trace_hotkey(trace_path, "helper", event, "sent")
         return 0
     except OSError:
+        _trace_hotkey(trace_path, "helper", event, "send_failed")
         # A crashed Murmur can leave a runtime binding until the key is next
         # pressed. Only remove it when its command still names this socket.
         try:
             records = _parse_hyprland_binds(_run_hyprctl(["binds"]))
             if any(socket_path in record.get("arg", "") for record in records):
-                _run_hyprctl(["keyword", "unbind", f", {hypr_key}"])
+                _run_hyprctl(["keyword", "unbind", binding_target])
         except HotkeyError:
             pass
         return 1
@@ -362,5 +639,6 @@ def _emit(socket_path: str, event: str, hypr_key: str) -> int:
         client.close()
 
 
-if __name__ == "__main__" and len(sys.argv) == 5 and sys.argv[1] == "emit":
-    raise SystemExit(_emit(sys.argv[2], sys.argv[3], sys.argv[4]))
+if __name__ == "__main__" and len(sys.argv) in (5, 6) and sys.argv[1] == "emit":
+    trace_path = sys.argv[5] if len(sys.argv) == 6 else None
+    raise SystemExit(_emit(sys.argv[2], sys.argv[3], sys.argv[4], trace_path))

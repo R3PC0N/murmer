@@ -403,6 +403,12 @@
               <button class="btn-primary btn-sm" id="capture-btn" onclick="startCapture()">Capture key</button>
               <select id="hotkey-select" style="display:none;max-width:260px" onchange="selectHotkey()"></select>
             </div>
+            <div class="row" id="hotkey-modifiers" style="display:none;margin-top:10px;gap:14px">
+              <label><input type="checkbox" value="ctrl" onchange="selectHotkey()"> Ctrl</label>
+              <label><input type="checkbox" value="alt" onchange="selectHotkey()"> Alt</label>
+              <label><input type="checkbox" value="shift" onchange="selectHotkey()"> Shift</label>
+              <label><input type="checkbox" value="super" onchange="selectHotkey()"> Super</label>
+            </div>
             <div class="hint">Hold this key anywhere to record. Release to transcribe and paste.</div>
           </div>
 
@@ -750,8 +756,9 @@
     btn.disabled = false;
     badge.classList.remove('capturing');
     if (key) {
-      badge.textContent = key.toUpperCase();
-      cfg.PUSH_TO_TALK_KEY = key;
+      const modifiers = [...document.querySelectorAll('#hotkey-modifiers input:checked')].map(input => input.value);
+      cfg.PUSH_TO_TALK_KEY = [...modifiers, key].join('+');
+      badge.textContent = cfg.PUSH_TO_TALK_KEY.toUpperCase();
     } else {
       badge.textContent = (cfg.PUSH_TO_TALK_KEY || 'f9').toUpperCase();
     }
@@ -759,13 +766,19 @@
 
   function selectHotkey() {
     const select = document.getElementById('hotkey-select');
-    if (select.value) {
-      cfg.PUSH_TO_TALK_KEY = select.value;
-      document.getElementById('hotkey-badge').textContent = select.value.toUpperCase();
+    const key = select.value || (cfg.PUSH_TO_TALK_KEY || 'f9').toLowerCase().split('+').pop();
+    if (key) {
+      const modifiers = [...document.querySelectorAll('#hotkey-modifiers input:checked')].map(input => input.value);
+      cfg.PUSH_TO_TALK_KEY = [...modifiers, key].join('+');
+      document.getElementById('hotkey-badge').textContent = cfg.PUSH_TO_TALK_KEY.toUpperCase();
     }
   }
 
   function configureHotkeyInput() {
+    const parts = (cfg.PUSH_TO_TALK_KEY || 'f9').toLowerCase().split('+');
+    const currentKey = parts.pop();
+    document.getElementById('hotkey-modifiers').style.display = '';
+    document.querySelectorAll('#hotkey-modifiers input').forEach(input => input.checked = parts.includes(input.value));
     if (cfg.HOTKEY_CAPTURE_MODE !== 'select') return;
     const captureBtn = document.getElementById('capture-btn');
     const select = document.getElementById('hotkey-select');
@@ -775,18 +788,18 @@
     (cfg.HOTKEY_OPTIONS || []).forEach(item => {
       const option = document.createElement('option');
       option.value = item.key;
-      option.disabled = !item.available && item.key !== cfg.PUSH_TO_TALK_KEY;
+      option.disabled = false;
       const conflict = (item.conflicts || []).join(', ');
       option.textContent = item.key.toUpperCase() + (conflict ? ` — In use: ${conflict}` : '');
       select.appendChild(option);
     });
-    if (![...select.options].some(option => option.value === cfg.PUSH_TO_TALK_KEY)) {
+    if (![...select.options].some(option => option.value === currentKey)) {
       const current = document.createElement('option');
-      current.value = cfg.PUSH_TO_TALK_KEY;
-      current.textContent = cfg.PUSH_TO_TALK_KEY.toUpperCase();
+      current.value = currentKey;
+      current.textContent = currentKey.toUpperCase();
       select.prepend(current);
     }
-    select.value = cfg.PUSH_TO_TALK_KEY;
+    select.value = currentKey;
   }
 
   // ── Load config ────────────────────────────────────────────────────────────
