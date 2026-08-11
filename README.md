@@ -114,7 +114,19 @@ cd murmur
 bash setup_linux.sh
 ```
 
-The script runs as your normal user. It creates `.venv` with access to system GTK/PyGObject packages, installs Python dependencies, validates the current desktop session's capabilities, and installs a visible XDG application entry and icon. It does not invoke a package manager or change device permissions.
+The script runs as your normal user. It creates `.venv` with
+`--system-site-packages` so the distro-managed PyGObject and Cairo bindings are
+available, installs the exact Linux dependency set pinned in
+`requirements-linux.lock`, validates the current desktop session's capabilities,
+and installs a visible XDG application entry and icon. It does not invoke a
+package manager or change device permissions. The lock is validated on Arch with
+CPython 3.14.6; recreate the venv after a Python minor-version upgrade.
+
+GTK, WebKitGTK, AppIndicator, PyGObject, and Cairo are intentionally not installed
+with pip. They must come from the system packages listed above. The dependency
+lock covers application Python packages only; faster-whisper downloads the chosen
+speech model into the normal Hugging Face cache on first use, and model weights
+are not stored or pinned in this repository.
 
 Native Wayland text insertion requires `wtype`. Hyprland push-to-talk uses temporary `hyprctl` runtime bindings and does not require membership in the `input` group. X11 sessions use `xdotool` instead.
 

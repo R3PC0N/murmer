@@ -29,6 +29,7 @@ foreach ($f in $pyFiles) { Copy-LF "$src\$f" "$tempDir\$f" }
 
 # ── Root support files ──────────────────────────────────────────────────────
 Copy-LF  "$src\requirements.txt"     "$tempDir\requirements.txt"
+Copy-LF  "$src\requirements-linux.lock" "$tempDir\requirements-linux.lock"
 Copy-LF  "$src\README.md"            "$tempDir\README.md"
 Copy-LF  "$src\setup_linux.sh"       "$tempDir\setup_linux.sh"
 Copy-LF  "$src\linux_bootstrap.py"   "$tempDir\linux_bootstrap.py"

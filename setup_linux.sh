@@ -36,8 +36,8 @@ if [ ! -x .venv/bin/python ]; then
     exit 1
 fi
 
-echo "Installing Python dependencies..."
-.venv/bin/python -m pip install -r requirements.txt
+echo "Installing pinned Linux Python dependencies..."
+.venv/bin/python -m pip install -r requirements-linux.lock
 
 echo "Checking Linux desktop and audio capabilities..."
 if ! .venv/bin/python linux_bootstrap.py check; then

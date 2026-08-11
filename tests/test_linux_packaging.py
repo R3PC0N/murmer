@@ -8,6 +8,7 @@ import linux_bootstrap
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "linux_runtime_files.txt"
+LINUX_LOCK = ROOT / "requirements-linux.lock"
 
 
 def runtime_project_files() -> set[str]:
@@ -58,6 +59,51 @@ class PackagingManifestTests(unittest.TestCase):
             "nvidia-smi", "gnome-extensions",
         ):
             self.assertNotIn(forbidden, setup)
+
+    def test_linux_setup_uses_pinned_lock_and_system_bindings(self):
+        setup = (ROOT / "setup_linux.sh").read_text(encoding="utf-8")
+        self.assertIn("python3 -m venv --system-site-packages .venv", setup)
+        self.assertIn("pip install -r requirements-linux.lock", setup)
+        self.assertNotIn("pip install -r requirements.txt", setup)
+
+    def test_linux_lock_pins_direct_requirements_and_excludes_system_bindings(self):
+        expected_direct = {
+            "faster-whisper": "1.2.1",
+            "sounddevice": "0.5.5",
+            "numpy": "2.5.1",
+            "keyboard": "0.13.5",
+            "pynput": "1.8.2",
+            "pyperclip": "1.11.0",
+            "pystray": "0.19.5",
+            "pillow": "12.3.0",
+            "anthropic": "0.121.0",
+            "python-dotenv": "1.2.2",
+            "pywebview": "6.2.1",
+            "requests": "2.34.2",
+        }
+        locked = {}
+        for line in LINUX_LOCK.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            self.assertRegex(line, r"^[A-Za-z0-9_.-]+==[^=]+$")
+            name, version = line.split("==", 1)
+            locked[name.lower().replace("_", "-")] = version
+        direct = {
+            line.strip().lower().replace("_", "-")
+            for line in (ROOT / "requirements.txt").read_text().splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        self.assertEqual(direct, set(expected_direct))
+        self.assertEqual(
+            {name: locked.get(name) for name in expected_direct}, expected_direct
+        )
+        self.assertNotIn("pygobject", locked)
+        self.assertNotIn("pycairo", locked)
+
+    def test_linux_archive_contains_dependency_lock(self):
+        builder = (ROOT / "build_linux_zip.ps1").read_text(encoding="utf-8")
+        self.assertIn('"$src\\requirements-linux.lock"', builder)
 
 
 class CapabilitySelectionTests(unittest.TestCase):
